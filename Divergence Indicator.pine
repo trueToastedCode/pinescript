@@ -324,7 +324,7 @@ plotBulDiv(nBack1, nBack2, isGhost) =>
                       style=label.style_label_up,
                       color=color.green,
                       size=size.tiny,
-                      tooltip=(isGhost ? "[ Unconfirmed ] " : "[ Confirmed ]") + " Bullish divergence is a key concept in technical analysis, indicating a potential reversal in a downtrend. It occurs when the price of an asset forms lower lows while the corresponding indicator (such as the Relative Strength Index or MACD) forms higher lows. This suggests a weakening downtrend momentum and the possibility of an upcoming price increase. Traders often use bullish divergence to anticipate trend reversals and consider it a signal to potentially enter long positions or to be cautious about shorting.")
+                      tooltip=(isGhost ? "[ Unconfirmed ]" : "[ Confirmed ]") + " Bullish divergence is a key concept in technical analysis, indicating a potential reversal in a downtrend. It occurs when the price of an asset forms lower lows while the corresponding indicator (such as the Relative Strength Index or MACD) forms higher lows. This suggests a weakening downtrend momentum and the possibility of an upcoming price increase. Traders often use bullish divergence to anticipate trend reversals and consider it a signal to potentially enter long positions or to be cautious about shorting.")
 
 plotHiddenBulDiv(nBack1, nBack2, isGhost) =>
     if nBack1 != -1 and nBack2 != -1 and ((not isGhost and isShowHiddenBullDiv) or (isGhost and isShowUnconfHiddenBullDiv))
@@ -343,7 +343,7 @@ plotHiddenBulDiv(nBack1, nBack2, isGhost) =>
                       style=label.style_label_up,
                       color=color.green,
                       size=size.tiny,
-                      tooltip=(isGhost ? "[ Unconfirmed ] " : "[ Confirmed ]") + " Hidden bullish divergence is a nuanced concept in technical analysis, signaling a continuation of an uptrend. It occurs when the price of an asset forms higher lows while the corresponding indicator (such as the Relative Strength Index or MACD) forms lower lows. This indicates that despite the price retracement, the underlying bullish momentum remains intact. Traders often interpret hidden bullish divergence as a signal to stay in long positions or consider entering new ones, anticipating the uptrend to persist.")
+                      tooltip=(isGhost ? "[ Unconfirmed ]" : "[ Confirmed ]") + " Hidden bullish divergence is a nuanced concept in technical analysis, signaling a continuation of an uptrend. It occurs when the price of an asset forms higher lows while the corresponding indicator (such as the Relative Strength Index or MACD) forms lower lows. This indicates that despite the price retracement, the underlying bullish momentum remains intact. Traders often interpret hidden bullish divergence as a signal to stay in long positions or consider entering new ones, anticipating the uptrend to persist.")
 
 plotBearDiv(nBack1, nBack2, isGhost) =>
     if nBack1 != -1 and nBack2 != -1 and ((not isGhost and isShowBearDiv) or (isGhost and isShowUnconfBearDiv))
@@ -362,7 +362,7 @@ plotBearDiv(nBack1, nBack2, isGhost) =>
                       style=label.style_label_down,
                       color=color.red,
                       size=size.tiny,
-                      tooltip=(isGhost ? "[ Unconfirmed ] " : "[ Confirmed ]") + " Bearish divergence is a crucial concept in technical analysis, signaling a potential reversal in an uptrend. It occurs when the price of an asset makes higher highs while the corresponding indicator (such as the Relative Strength Index or MACD) forms lower highs. This suggests weakening momentum and potential upcoming price decline. Traders often use bearish divergence to anticipate trend reversals and consider it a warning sign to exercise caution or consider shorting positions.")
+                      tooltip=(isGhost ? "[ Unconfirmed ]" : "[ Confirmed ]") + " Bearish divergence is a crucial concept in technical analysis, signaling a potential reversal in an uptrend. It occurs when the price of an asset makes higher highs while the corresponding indicator (such as the Relative Strength Index or MACD) forms lower highs. This suggests weakening momentum and potential upcoming price decline. Traders often use bearish divergence to anticipate trend reversals and consider it a warning sign to exercise caution or consider shorting positions.")
 
 plotHiddenBearDiv(nBack1, nBack2, isGhost) =>
     if nBack1 != -1 and nBack2 != -1 and ((not isGhost and isShowHiddenBearDiv) or (isGhost and isShowUnconfHiddenBearDiv))
@@ -381,7 +381,7 @@ plotHiddenBearDiv(nBack1, nBack2, isGhost) =>
                       style=label.style_label_down,
                       color=color.red,
                       size=size.tiny,
-                      tooltip=isGhost ? "[ Unconfirmed ] " : "[ Confirmed ]" + " Hidden bearish divergence is an insightful concept in technical analysis, suggesting a continuation of a downtrend. It occurs when the price of an asset forms lower highs while the corresponding indicator (such as the Relative Strength Index or MACD) forms higher highs. This divergence signals that despite the temporary price rally, the underlying bearish momentum remains strong. Traders often interpret hidden bearish divergence as a warning sign to exercise caution in long positions or consider entering short positions, anticipating the downtrend to persist.")
+                      tooltip=(isGhost ? "[ Unconfirmed ]" : "[ Confirmed ]") + " Hidden bearish divergence is an insightful concept in technical analysis, suggesting a continuation of a downtrend. It occurs when the price of an asset forms lower highs while the corresponding indicator (such as the Relative Strength Index or MACD) forms higher highs. This divergence signals that despite the temporary price rally, the underlying bearish momentum remains strong. Traders often interpret hidden bearish divergence as a warning sign to exercise caution in long positions or consider entering short positions, anticipating the downtrend to persist.")
 
 for i = 0 to int((nLeftEnd - nLeftStart) / nLeftStep)
     nLeft  = nLeftStart + nLeftStep * i
