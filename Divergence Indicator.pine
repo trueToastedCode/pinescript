@@ -2,362 +2,414 @@
 // © iFlyTheMoon
 
 //@version=5
-indicator("My script", overlay=true)
+indicator("Divergence Indicator", overlay=true)
 
-visibilityParamsGroupName       = "Visibility"
-isShowBullDiv                   = input.bool(true, "Bullish divergence", group=visibilityParamsGroupName)
-isShowHiddenBullDiv             = input.bool(true, "Hidden bullish divergence", group=visibilityParamsGroupName)
-isShowBearDiv                   = input.bool(true, "Bear divergence", group=visibilityParamsGroupName)
-isShowHiddenBearDiv             = input.bool(true, "Hidden bear divergence", group=visibilityParamsGroupName)
+visibilityParamsGroupName = "Visibility"
 
-candleParamsGroupName          = "Candle Parameters"
-nLeftStart                     = input.int(20, "Candles left start", group=candleParamsGroupName)
-nLeftStep                      = input.int(10, "Candles left step", group=candleParamsGroupName)
-nLeftEnd                       = input.int(40, "Candles left end", group=candleParamsGroupName)
-nRightStart                    = input.int(1, "Candles right start", group=candleParamsGroupName)
-nRightStep                     = input.int(0, "Candles right step", group=candleParamsGroupName)
-nBetweenMax                    = input.int(0, "Pivots between max", group=candleParamsGroupName)
-nMaxBack                       = input.int(400, "Max backcandles", group=candleParamsGroupName)
-bullishMinCandlesBetween       = input.int(7, "Bull div min candles in between", group=candleParamsGroupName)
-hiddenBullishMinCandlesBetween = input.int(7, "Hidden bull Div Min Candles In Between", group=candleParamsGroupName)
-bearMinCandlesBetween          = input.int(7, "Bear div min candles in between", group=candleParamsGroupName)
-hiddenBearMinCandlesBetween    = input.int(7, "Hidden bear div min candles in between", group=candleParamsGroupName)
+isShowBullDiv             = input.bool(true, "Bullish divergence", group=visibilityParamsGroupName)
+isShowHiddenBullDiv       = input.bool(true, "Hidden bullish divergence", group=visibilityParamsGroupName)
+isShowBearDiv             = input.bool(true, "Bear divergence", group=visibilityParamsGroupName)
+isShowHiddenBearDiv       = input.bool(true, "Hidden bear divergence", group=visibilityParamsGroupName)
 
-colorsGroupName    = "Colors"
-divColorBull       = input.color(color.new(color.blue, 35), "Bullish divergence", group=colorsGroupName)
-divColorHiddenBull = input.color(color.new(color.blue, 35), "Hidden bullish divergence", group=colorsGroupName)
-divColorBear       = input.color(color.new(color.orange, 35), "Bearish divergence", group=colorsGroupName)
-divColorHiddenBear = input.color(color.new(color.orange, 35), "Hidden bearish divergence", group=colorsGroupName)
+isShowUnconfBullDiv       = input.bool(true, "Unconfirmed bullish divergence", group=visibilityParamsGroupName)
+isShowUnconfHiddenBullDiv = input.bool(true, "Unconfirmed hidden bullish divergence", group=visibilityParamsGroupName)
+isShowUnconfBearDiv       = input.bool(true, "Unconfirmed bear divergence", group=visibilityParamsGroupName)
+isShowUnconfHiddenBearDiv = input.bool(true, "Unconfirmed hidden bear divergence", group=visibilityParamsGroupName)
 
-if nLeftStart % nLeftStep != 0
-    runtime.error("Invalid Configuration: Left start value must be divisible by left step size.")
+isShowDivLine             = input.bool(true, "Lines", group=visibilityParamsGroupName)
+isShowDivLabel            = input.bool(true, "Label", group=visibilityParamsGroupName)
 
-if nLeftEnd % nLeftStep != 0
-    runtime.error("Invalid Configuration: Left end value must be divisible by left step size.")
+candleParamsGroupName = "Candle Parameters"
+nLeftStart            = input.int(5, "Candles left start", group=candleParamsGroupName)
+nLeftStep             = input.int(10, "Candles left step", group=candleParamsGroupName)
+nLeftEnd              = input.int(25, "Candles left end", group=candleParamsGroupName)
+nRightStart           = input.int(5, "Candles right start", group=candleParamsGroupName)
+nRightStep            = input.int(10, "Candles right step", group=candleParamsGroupName)
+maxInBetween          = input.int(0, "Pivots between max", group=candleParamsGroupName)
+nMaxBack              = input.int(-1, "Max backcandles", group=candleParamsGroupName)
+
+if (nLeftStart + nLeftEnd) % nLeftStep != 0
+    runtime.error("Invalid Configuration: Sum of left start and end value must be divisible by left step size.")
 
 if nLeftEnd < nLeftStart
     runtime.error("Invalid Configuration: Left end value must be lesser than left start value.")
 
+// !!!
+// Passing series as function arguments results in unwanted readings
+// !!!
+
 indicator = ta.rsi(close, 14)
+atr = ta.atr(14)
 
-getFloatArrayFromLow(nBackStart, nBackEnd) =>
-    result = array.new<float>(nBackEnd - nBackStart + 1)
-    for i = nBackStart to nBackEnd
-        array.set(result, i - nBackStart, low[i])
-    result
+getLowMinNBack(nBack, nLeft, nRight) =>
+    // Boundary checks to ensure valid input parameters
+    if nBack < nRight
+        runtime.error("The test index (nBack) must be greater than or equal to the number of elements to consider to the right (nRight).")
+    
+    if nBack > bar_index - nLeft
+        runtime.error("The test index (nBack) exceeds the maximum index allowed considering the number of elements to consider to the left (nLeft).")
 
-getFloatArrayFromHigh(nBackStart, nBackEnd) =>
-    result = array.new<float>(nBackEnd - nBackStart + 1)
-    for i = nBackStart to nBackEnd
-        array.set(result, i - nBackStart, high[i])
-    result
+    endNBack = nBack + nLeft
 
-getFloatArrayFromSeriesName(srcName, nBackStart, nBackEnd) =>
-    // weird workaround, passing series directly resulted in readings becoming na
-    result = switch srcName
-        "low" => getFloatArrayFromLow(nBackStart, nBackEnd)
-        "high" => getFloatArrayFromHigh(nBackStart, nBackEnd)
-        => na
-    if na(result)
-        runtime.error(str.format("Unknown srcName: {0}", srcName))
-    result
+    // Initialize the minimum index to start the search
+    nBackMin = -1
 
-getUniqueMinIdx(values) =>
+    for i = nBack - nRight to endNBack
+        if not na(low[i])
+            nBackMin := i
+            break
+    
+    // Check if first minimum index could be found
+    if nBackMin == -1
+        log.error("No valid first minimum index could be found")
+
+    // Loop to find the index of the minimum value within the specified range
+    // if not already done
+    if nBackMin != -1 and nBackMin != endNBack
+        for i = nBackMin + 1 to endNBack
+            // Compare the value at the current index (i) with the value at nBackMin
+            if low[i] < low[nBackMin]
+                // If the value at src[i] is smaller, update nBackMin to the current index (i)
+                nBackMin := i
+    
+    // Return the index of the minimum value found within the specified range
+    nBackMin
+
+getHighMaxNBack(nBack, nLeft, nRight) =>
+    // Boundary checks to ensure valid input parameters
+    if nBack < nRight
+        runtime.error("The test index (nBack) must be greater than or equal to the number of elements to consider to the right (nRight).")
+    
+    if nBack > bar_index - nLeft
+        runtime.error("The test index (nBack) exceeds the maximum index allowed considering the number of elements to consider to the left (nLeft).")
+
+    endNBack = nBack + nLeft
+
+    // Initialize the minimum index to start the search
+    nBackMax = -1
+
+    for i = nBack - nRight to endNBack
+        if not na(high[i])
+            nBackMax := i
+            break
+    
+    // Check if first minimum index could be found
+    if nBackMax == -1
+        log.error("No valid first minimum index could be found")
+
+    // Loop to find the index of the maximum value within the specified range
+    // if not already done
+    if nBackMax != -1 and nBackMax != endNBack
+        for i = nBackMax + 1 to endNBack
+            // Compare the value at the current index (i) with the value at nBackMax
+            if high[i] > high[nBackMax]
+                // If the value at src[i] is greater, update nBackMax to the current index (i)
+                nBackMax := i
+    
+    // Return the index of the maximum value found within the specified range
+    nBackMax
+
+isLowPivotLow(nBack, nLeft, nRight) =>
+    bar_index >= nLeft + nRight ? getLowMinNBack(nBack, nLeft, nRight) == nBack : false
+
+getGhostLowPivotLowNBack(nLeft, nRight) =>
     result = -1
-    if array.size(values) > 0
-        if array.size(values) == 1
-            result := 0
-        else
-            lowVal = array.min(values)
-            if array.min(values, 1) != lowVal
-                result := array.indexof(values, lowVal)
+    if barstate.islast and nRight != 0
+        lowMinNBack = getLowMinNBack(nRight, nLeft, nRight)
+        if lowMinNBack < nRight
+            result := lowMinNBack
     result
 
-getUniqueMaxIdx(values) =>
+isHighPivotHigh(nBack, nLeft, nRight) =>
+    bar_index >= nLeft + nRight ? getHighMaxNBack(nBack, nLeft, nRight) == nBack : false
+
+getGhostHighPivotHighNBack(nLeft, nRight) =>
     result = -1
-    if array.size(values) > 0
-        if array.size(values) == 1
-            result := 0
-        else
-            lowVal = array.max(values)
-            if array.max(values, 1) != lowVal
-                result := array.indexof(values, lowVal)
+    if barstate.islast and nRight != 0
+        highMaxNBack = getHighMaxNBack(nRight, nLeft, nRight)
+        if highMaxNBack < nRight
+            result := highMaxNBack
     result
 
-isPivotLow(srcName, nLeft, nRight) =>
-    getUniqueMinIdx(getFloatArrayFromSeriesName(srcName, 0, nLeft + nRight)) == nRight
+getLowPivotsLow(nBackStart, nBackEnd, nLeft, nRight, maxCount) =>
+    // Boundary checks to ensure valid input parameters
+    if nBackEnd < nBackStart
+        runtime.error("The end index (nBackEnd) cannot be greater than the start index (nBackStart)")
 
-isPivotHigh(srcName, nLeft, nRight) =>
-    getUniqueMaxIdx(getFloatArrayFromSeriesName(srcName, 0, nLeft + nRight)) == nRight
+    if nBackStart < nRight
+        runtime.error("The starting index (nBackStart) must be greater than or equal to the number of elements to consider to the right (nRight).")
 
-getPivotsLow(srcName, nBackStart, nBackEnd, nLeft, nRight, nMax) =>
+    if nBackEnd > bar_index - nLeft
+        runtime.error("The end index (nBackEnd) exceeds the maximum index allowed considering the number of elements to consider to the left (nLeft).")
+
+    // Loop through and collect pivots low
     result = array.new<int>(0)
+
     for i = nBackStart to nBackEnd
-        if getUniqueMinIdx(getFloatArrayFromSeriesName(srcName, i - nRight, i + nLeft)) == nRight
+        if isLowPivotLow(i, nLeft, nRight)
             array.push(result, i)
-            if array.size(result) == nMax
+
+            // stop max pivot cound reached
+            if maxCount > 0 and array.size(result) == maxCount
                 break
+    
     result
 
-getPivotsHigh(srcName, nBackStart, nBackEnd, nLeft, nRight, nMax) =>
+getHighPivotsHigh(nBackStart, nBackEnd, nLeft, nRight, maxCount) =>
+    // Boundary checks to ensure valid input parameters
+    if nBackEnd < nBackStart
+        runtime.error("The end index (nBackEnd) cannot be greater than the start index (nBackStart)")
+
+    if nBackStart < nRight
+        runtime.error("The starting index (nBackStart) must be greater than or equal to the number of elements to consider to the right (nRight).")
+
+    if nBackEnd > bar_index - nLeft
+        runtime.error("The end index (nBackEnd) exceeds the maximum index allowed considering the number of elements to consider to the left (nLeft).")
+
+    // Loop through and collect pivots low
     result = array.new<int>(0)
+
     for i = nBackStart to nBackEnd
-        if getUniqueMaxIdx(getFloatArrayFromSeriesName(srcName, i - nRight, i + nLeft)) == nRight
+        if isHighPivotHigh(i, nLeft, nRight)
             array.push(result, i)
-            if array.size(result) == nMax
+
+            // stop max pivot cound reached
+            if maxCount > 0 and array.size(result) == maxCount
                 break
+    
     result
 
-getBullishDivergence(nRight, prevPivotsLow, minCandlesBetween) =>
-    result = -1
-    if array.size(prevPivotsLow) > 0
+getDivergences(nLeft, nRight) =>
+    if nMaxBack > 0 and nMaxBack <= nRight
+        runtime.error("nMaxBack must be greater than nRight")
+    
+    isPivotLow          = false
+    ghostPivotLowNBack  = -1
+    isPivotHigh         = false
+    ghostPivotHighNBack = -1
+
+    // get current pivots
+    if bar_index > nLeft + nRight
+        isPivotLow          := isLowPivotLow(nRight, nLeft, nRight)
+        ghostPivotLowNBack  := getGhostLowPivotLowNBack(nLeft, nRight)
+        isPivotHigh         := isHighPivotHigh(nRight, nLeft, nRight)
+        ghostPivotHighNBack := getGhostHighPivotHighNBack(nLeft, nRight)
+
+    // find pivots to test against current pivots
+    prevPivotsLow  = array.new<int>()
+    prevPivotsHigh = array.new<int>()
+
+    if isPivotLow or ghostPivotLowNBack != -1
+        prevPivotsLow := getLowPivotsLow(nBackStart=nRight + 1,
+                                         nBackEnd=nMaxBack > 0 ? math.min(bar_index - nLeft, nMaxBack) : bar_index - nLeft,
+                                         nLeft=nLeft,
+                                         nRight=nRight,
+                                         maxCount=maxInBetween >= 0 ? maxInBetween + 1 : -1)
+
+    if isPivotHigh or ghostPivotHighNBack != -1
+        prevPivotsHigh := getHighPivotsHigh( nBackStart=nRight + 1,
+                                             nBackEnd=nMaxBack > 0 ? math.min(bar_index - nLeft, nMaxBack) : bar_index - nLeft,
+                                             nLeft=nLeft,
+                                             nRight=nRight,
+                                             maxCount=maxInBetween >= 0 ? maxInBetween + 1 : -1)
+
+    // find bullish divergence using confirmed pivot
+    bulDivNBack       = -1
+    hiddenBulDivNBack = -1
+
+    if isPivotLow and array.size(prevPivotsLow) > 0
         for i = 0 to array.size(prevPivotsLow) - 1
-            if array.get(prevPivotsLow, i) - nRight - 1 < minCandlesBetween
-                continue
-            if (     low[nRight] < low[array.get(prevPivotsLow, i)]
-                 and indicator[nRight] > indicator[array.get(prevPivotsLow, i)] )
-                result := array.get(prevPivotsLow, i)
-                break
-    result
+            nBack = array.get(prevPivotsLow, i)
 
-getHiddenBullishDivergence(nRight, prevPivotsLow, minCandlesBetween) =>
-    result = -1
-    if array.size(prevPivotsLow) > 0
+            if bulDivNBack == -1 ? low[nRight] < low[nBack] and indicator[nRight] > indicator[nBack] : false
+                bulDivNBack := nBack
+
+                if hiddenBulDivNBack != -1
+                    break
+
+            if hiddenBulDivNBack == -1 ? low[nRight] > low[nBack] and indicator[nRight] < indicator[nBack] : false
+                hiddenBulDivNBack := nBack
+
+                if bulDivNBack != -1
+                    break
+    
+    // find bullish divergence using unconfirmed pivot
+    ghostBulDivNBack       = -1
+    ghostHiddenBulDivNBack = -1
+
+    if ghostPivotLowNBack != -1 and array.size(prevPivotsLow) > 0
         for i = 0 to array.size(prevPivotsLow) - 1
-            if array.get(prevPivotsLow, i) - nRight - 1 < minCandlesBetween
-                continue
-            if (     low[nRight] > low[array.get(prevPivotsLow, i)]
-                 and indicator[nRight] < indicator[array.get(prevPivotsLow, i)] )
-                result := array.get(prevPivotsLow, i)
-                break
-    result
+            nBack = array.get(prevPivotsLow, i)
 
-getBearishDivergence(nRight, prevPivotsHigh, minCandlesBetween) =>
-    result = -1
-    if array.size(prevPivotsHigh) > 0
+            if ghostBulDivNBack == -1 ? low[ghostPivotLowNBack] < low[nBack] and indicator[ghostPivotLowNBack] > indicator[nBack] : false
+                ghostBulDivNBack := nBack
+
+                if ghostHiddenBulDivNBack != -1
+                    break
+
+            if ghostHiddenBulDivNBack == -1 ? low[ghostPivotLowNBack] > low[nBack] and indicator[ghostPivotLowNBack] < indicator[nBack] : false
+                ghostHiddenBulDivNBack := nBack
+
+                if ghostBulDivNBack != -1
+                    break
+
+    // find bearish divergence using confirmed pivot
+    bearDivNBack       = -1
+    hiddenBearDivNBack = -1
+
+    if isPivotHigh and array.size(prevPivotsHigh) > 0
         for i = 0 to array.size(prevPivotsHigh) - 1
-            if array.get(prevPivotsHigh, i) - nRight - 1 < minCandlesBetween
-                continue
-            if (     high[nRight] > high[array.get(prevPivotsHigh, i)]
-                 and indicator[nRight] < indicator[array.get(prevPivotsHigh, i)] )
-                result := array.get(prevPivotsHigh, i)
-                break
-    result
+            nBack = array.get(prevPivotsHigh, i)
 
-getHiddenBearishDivergence(nRight, prevPivotsHigh, minCandlesBetween) =>
-    result = -1
-    if array.size(prevPivotsHigh) > 0
+            if bearDivNBack == -1 ? high[nRight] > high[nBack] and indicator[nRight] < indicator[nBack] : false
+                bearDivNBack := nBack
+
+                if hiddenBearDivNBack != -1
+                    break
+
+            if hiddenBearDivNBack == -1 ? high[nRight] < high[nBack] and indicator[nRight] > indicator[nBack] : false
+                hiddenBearDivNBack := nBack
+
+                if bearDivNBack != -1
+                    break    
+
+    // find (hidden)bearish divergence using unconfirmed pivot
+    ghostBearDivNBack       = -1
+    ghostHiddenBearDivNBack = -1
+
+    if ghostPivotHighNBack != -1 and array.size(prevPivotsHigh) > 0
         for i = 0 to array.size(prevPivotsHigh) - 1
-            if array.get(prevPivotsHigh, i) - nRight - 1 < minCandlesBetween
-                continue
-            if (     high[nRight] < high[array.get(prevPivotsHigh, i)]
-                 and indicator[nRight] > indicator[array.get(prevPivotsHigh, i)] )
-                result := array.get(prevPivotsHigh, i)
-                break
-    result
+            nBack = array.get(prevPivotsHigh, i)
 
-getDivergences(
-               nLeft,
-               nRight,
-               nBetweenMax,
-               nBackMax,
-               bullishMinCandlesBetween,
-               hiddenBullishMinCandlesBetween,
-               bearMinCandlesBetween,
-               hiddenBearMinCandlesBetween,
-               isTestBullDiv,
-               isTestHiddenBullDiv,
-               isTestBearDiv,
-               isTestHiddenBearDiv
-              ) =>
+            if ghostBearDivNBack == -1 ? high[ghostPivotHighNBack] > high[nBack] and indicator[ghostPivotHighNBack] < indicator[nBack] : false
+                ghostBearDivNBack := nBack
+
+                if ghostHiddenBearDivNBack != -1
+                    break
+
+            if hiddenBearDivNBack == -1 ? high[ghostPivotHighNBack] < high[nBack] and indicator[ghostPivotHighNBack] > indicator[nBack] : false
+                ghostHiddenBearDivNBack := nBack
+
+                if ghostBearDivNBack != -1
+                    break
     
-    bullishDivergence       = -1
-    hiddenBullishDivergence = -1
-    bearishDivergence       = -1
-    hiddenBearishDivergence = -1
+    [bulDivNBack,
+     hiddenBulDivNBack,
+     
+     ghostBulDivNBack,
+     ghostHiddenBulDivNBack,
+     ghostPivotLowNBack,
+     
+     bearDivNBack,
+     hiddenBearDivNBack,
+     
+     ghostBearDivNBack,
+     ghostHiddenBearDivNBack,
+     ghostPivotHighNBack]
 
-    if bar_index >= nLeft + nRight + 2
-        nBackStart = nRight + 1
-        nBackEnd   = nBackMax > 0 ? math.min(bar_index - nLeft - 1, nBackMax) : bar_index - nLeft - 1
+plotBulDiv(nBack1, nBack2, isGhost) =>
+    if nBack1 != -1 and nBack2 != -1 and ((not isGhost and isShowBullDiv) or (isGhost and isShowUnconfBullDiv))
+        if isShowDivLine
+            line.new(x1=bar_index - nBack1,
+                     y1=low[nBack1],
+                     x2=bar_index - nBack2,
+                     y2=low[nBack2],
+                     color=color.blue,
+                     style=line.style_dotted)
 
-        if (isTestBullDiv or isTestHiddenBullDiv) ? isPivotLow("low", nLeft, nRight) : false
-            prevPivotsLow = getPivotsLow("low", nBackStart, nBackEnd, nLeft, nRight, nBetweenMax + 1)
+        if isShowDivLabel
+            label.new(x=bar_index - nBack2,
+                      y=low[nBack2] - atr[nBack2] * 0.3,
+                      text=isGhost ? "👻" : "🦄",
+                      style=label.style_label_up,
+                      color=color.green,
+                      size=size.tiny,
+                      tooltip=(isGhost ? "[ Unconfirmed ] " : "[ Confirmed ]") + " Bullish divergence is a key concept in technical analysis, indicating a potential reversal in a downtrend. It occurs when the price of an asset forms lower lows while the corresponding indicator (such as the Relative Strength Index or MACD) forms higher lows. This suggests a weakening downtrend momentum and the possibility of an upcoming price increase. Traders often use bullish divergence to anticipate trend reversals and consider it a signal to potentially enter long positions or to be cautious about shorting.")
 
-            if isTestBullDiv
-                bullishDivergence := getBullishDivergence(nRight, prevPivotsLow, bullishMinCandlesBetween)
-            
-            if isTestHiddenBullDiv
-                hiddenBullishDivergence := getHiddenBullishDivergence(nRight, prevPivotsLow, hiddenBullishMinCandlesBetween)
+plotHiddenBulDiv(nBack1, nBack2, isGhost) =>
+    if nBack1 != -1 and nBack2 != -1 and ((not isGhost and isShowHiddenBullDiv) or (isGhost and isShowUnconfHiddenBullDiv))
+        if isShowDivLine
+            line.new(x1=bar_index - nBack1,
+                     y1=low[nBack1],
+                     x2=bar_index - nBack2,
+                     y2=low[nBack2],
+                     color=color.blue,
+                     style=line.style_dotted)
         
-        if (isTestBearDiv or isTestHiddenBearDiv) ? isPivotHigh("high", nLeft, nRight) : false
-            prevPivotsHigh = getPivotsHigh("high", nBackStart, nBackEnd, nLeft, nRight, nBetweenMax + 1)
+        if isShowDivLabel
+            label.new(x=bar_index - nBack2,
+                      y=low[nBack2] - atr[nBack2] * 0.3,
+                      text=isGhost ? "👻" : "🦄",
+                      style=label.style_label_up,
+                      color=color.green,
+                      size=size.tiny,
+                      tooltip=(isGhost ? "[ Unconfirmed ] " : "[ Confirmed ]") + " Hidden bullish divergence is a nuanced concept in technical analysis, signaling a continuation of an uptrend. It occurs when the price of an asset forms higher lows while the corresponding indicator (such as the Relative Strength Index or MACD) forms lower lows. This indicates that despite the price retracement, the underlying bullish momentum remains intact. Traders often interpret hidden bullish divergence as a signal to stay in long positions or consider entering new ones, anticipating the uptrend to persist.")
 
-            if isTestBearDiv
-                bearishDivergence := getBearishDivergence(nRight, prevPivotsHigh, bearMinCandlesBetween)
-            
-            if isTestHiddenBearDiv
-                hiddenBearishDivergence := getHiddenBearishDivergence(nRight, prevPivotsHigh, hiddenBearMinCandlesBetween)
+plotBearDiv(nBack1, nBack2, isGhost) =>
+    if nBack1 != -1 and nBack2 != -1 and ((not isGhost and isShowBearDiv) or (isGhost and isShowUnconfBearDiv))
+        if isShowDivLine
+            line.new(x1=bar_index - nBack1,
+                     y1=high[nBack1],
+                     x2=bar_index - nBack2,
+                     y2=high[nBack2],
+                     color=color.orange,
+                     style=line.style_dotted)
+
+        if isShowDivLabel
+            label.new(x=bar_index - nBack2,
+                      y=high[nBack2] + atr[nBack2] * 0.3,
+                      text=isGhost ? "👻" : "🐻",
+                      style=label.style_label_down,
+                      color=color.red,
+                      size=size.tiny,
+                      tooltip=(isGhost ? "[ Unconfirmed ] " : "[ Confirmed ]") + " Bearish divergence is a crucial concept in technical analysis, signaling a potential reversal in an uptrend. It occurs when the price of an asset makes higher highs while the corresponding indicator (such as the Relative Strength Index or MACD) forms lower highs. This suggests weakening momentum and potential upcoming price decline. Traders often use bearish divergence to anticipate trend reversals and consider it a warning sign to exercise caution or consider shorting positions.")
+
+plotHiddenBearDiv(nBack1, nBack2, isGhost) =>
+    if nBack1 != -1 and nBack2 != -1 and ((not isGhost and isShowHiddenBearDiv) or (isGhost and isShowUnconfHiddenBearDiv))
+        if isShowDivLine
+            line.new(x1=bar_index - nBack1,
+                     y1=high[nBack1],
+                     x2=bar_index - nBack2,
+                     y2=high[nBack2],
+                     color=color.orange,
+                     style=line.style_dotted)
+
+        if isShowDivLabel
+            label.new(x=bar_index - nBack2,
+                      y=high[nBack2] + atr[nBack2] * 0.3,
+                      text=isGhost ? "👻" : "🐻",
+                      style=label.style_label_down,
+                      color=color.red,
+                      size=size.tiny,
+                      tooltip=isGhost ? "[ Unconfirmed ] " : "[ Confirmed ]" + " Hidden bearish divergence is an insightful concept in technical analysis, suggesting a continuation of a downtrend. It occurs when the price of an asset forms lower highs while the corresponding indicator (such as the Relative Strength Index or MACD) forms higher highs. This divergence signals that despite the temporary price rally, the underlying bearish momentum remains strong. Traders often interpret hidden bearish divergence as a warning sign to exercise caution in long positions or consider entering short positions, anticipating the downtrend to persist.")
+
+for i = 0 to int((nLeftEnd - nLeftStart) / nLeftStep)
+    nLeft  = nLeftStart + nLeftStep * i
+    nRight = nRightStart + nRightStep * i
     
-    [bullishDivergence,
-      hiddenBullishDivergence,
-      bearishDivergence,
-      hiddenBearishDivergence]
+    [bulDivNBack,
+     hiddenBulDivNBack,
+     
+     ghostBulDivNBack,
+     ghostHiddenBulDivNBack,
+     ghostPivotLowNBack,
+     
+     bearDivNBack,
+     hiddenBearDivNBack,
+     
+     ghostBearDivNBack,
+     ghostHiddenBearDivNBack,
+     ghostPivotHighNBack] = getDivergences(nLeft, nRight)
 
-plotDivergences(
-                 nLeft,
-                 nRight,
-                 nBetweenMax,
-                 nMaxBack,
-                 bullishMinCandlesBetween,
-                 hiddenBullishMinCandlesBetween,
-                 bearMinCandlesBetween,
-                 hiddenBearMinCandlesBetween,
-                 isShowBullDiv,
-                 isShowHiddenBullDiv,
-                 isShowBearDiv,
-                 isShowHiddenBearDiv
-               ) =>
-    
-    [bullishDivergence,
-     hiddenBullishDivergence,
-     bearishDivergence,
-     hiddenBearishDivergence] = getDivergences(
-                                               nLeft,
-                                               nRight,
-                                               nBetweenMax,
-                                               nMaxBack,
-                                               bullishMinCandlesBetween,
-                                               hiddenBullishMinCandlesBetween,
-                                               bearMinCandlesBetween,
-                                               hiddenBearMinCandlesBetween,
-                                               isShowBullDiv,
-                                               isShowHiddenBullDiv,
-                                               isShowBearDiv,
-                                               isShowHiddenBearDiv
-                                              )
+    plotBulDiv(bulDivNBack, nRight, false)
+    plotHiddenBulDiv(hiddenBulDivNBack, nRight, false)
 
-    if bullishDivergence != -1
-        line.new( bar_index - bullishDivergence,
-                  low[bullishDivergence],
-                  bar_index - nRight,
-                  low[nRight],
-                  color=divColorBull,
-                  style=line.style_dotted        )
-        
-        label.new(
-                  bar_index - nRight,
-                  low[nRight],
-                  text="🦄",
-                  style=label.style_label_up,
-                  color=color.green,
-                  textcolor=color.white,
-                  tooltip="Bullish divergence is a key concept in technical analysis, indicating a potential reversal in a downtrend. It occurs when the price of an asset forms lower lows while the corresponding indicator (such as the Relative Strength Index or MACD) forms higher lows. This suggests a weakening downtrend momentum and the possibility of an upcoming price increase. Traders often use bullish divergence to anticipate trend reversals and consider it a signal to potentially enter long positions or to be cautious about shorting.",
-                  size=size.tiny
-                 )
+    plotBulDiv(ghostBulDivNBack, ghostPivotLowNBack, true)
+    plotHiddenBulDiv(ghostHiddenBulDivNBack, ghostPivotLowNBack, true)
 
-    if hiddenBullishDivergence != -1
-        line.new( bar_index - hiddenBullishDivergence,
-                  low[hiddenBullishDivergence],
-                  bar_index - nRight,
-                  low[nRight],
-                  color=divColorHiddenBull,
-                  style=line.style_dotted              )
-        
-        label.new(
-                  bar_index - nRight,
-                  low[nRight],
-                  text="🙈🦄",
-                  style=label.style_label_up,
-                  color=color.green,
-                  textcolor=color.white,
-                  tooltip="Hidden bullish divergence is a nuanced concept in technical analysis, signaling a continuation of an uptrend. It occurs when the price of an asset forms higher lows while the corresponding indicator (such as the Relative Strength Index or MACD) forms lower lows. This indicates that despite the price retracement, the underlying bullish momentum remains intact. Traders often interpret hidden bullish divergence as a signal to stay in long positions or consider entering new ones, anticipating the uptrend to persist.",
-                  size=size.tiny
-                 )
-    
-    if bearishDivergence != -1
-        line.new( bar_index - bearishDivergence,
-                  high[bearishDivergence],
-                  bar_index - nRight,
-                  high[nRight],
-                  color=divColorBear,
-                  style=line.style_dotted        )
-        
-        label.new(
-                  bar_index - nRight,
-                  high[nRight],
-                  text="🐻",
-                  style=label.style_label_down,
-                  color=color.red,
-                  textcolor=color.white,
-                  tooltip="Bearish divergence is a crucial concept in technical analysis, signaling a potential reversal in an uptrend. It occurs when the price of an asset makes higher highs while the corresponding indicator (such as the Relative Strength Index or MACD) forms lower highs. This suggests weakening momentum and potential upcoming price decline. Traders often use bearish divergence to anticipate trend reversals and consider it a warning sign to exercise caution or consider shorting positions.",
-                  size=size.tiny
-                 )
-    
-    if hiddenBearishDivergence != -1
-        line.new( bar_index - hiddenBearishDivergence,
-                  high[hiddenBearishDivergence],
-                  bar_index - nRight,
-                  high[nRight],
-                  color=divColorHiddenBear,
-                  style=line.style_dotted              )
-        
-        label.new(
-                  bar_index - nRight,
-                  high[nRight],
-                  text="🙈🐻",
-                  style=label.style_label_down,
-                  color=color.red,
-                  textcolor=color.white,
-                  tooltip="Hidden bearish divergence is an insightful concept in technical analysis, suggesting a continuation of a downtrend. It occurs when the price of an asset forms lower highs while the corresponding indicator (such as the Relative Strength Index or MACD) forms higher highs. This divergence signals that despite the temporary price rally, the underlying bearish momentum remains strong. Traders often interpret hidden bearish divergence as a warning sign to exercise caution in long positions or consider entering short positions, anticipating the downtrend to persist.",
-                  size=size.tiny
-                 )
+    plotBearDiv(bearDivNBack, nRight, false)
+    plotHiddenBearDiv(hiddenBearDivNBack, nRight, false)
 
-plotDivergencesWithDifferentPivots(
-                                   nLeftStart,
-                                   nLeftEnd,
-                                   nLeftStep,
-                                   nRightStart,
-                                   nRightStep,
-                                   nBetweenMax,
-                                   nMaxBack,
-                                   bullishMinCandlesBetween,
-                                   hiddenBullishMinCandlesBetween,
-                                   bearMinCandlesBetween,
-                                   hiddenBearMinCandlesBetween,
-                                   isShowBullDiv,
-                                   isShowHiddenBullDiv,
-                                   isShowBearDiv,
-                                   isShowHiddenBearDiv
-                                  ) =>
-    
-    for i = 0 to int((nLeftEnd - nLeftStart) / nLeftStep)
-        plotDivergences( nLeftStart + i * nLeftStep,
-                         nRightStart + i * nRightStep,
-                         nBetweenMax,
-                         nMaxBack,
-                         bullishMinCandlesBetween,
-                         hiddenBullishMinCandlesBetween,
-                         bearMinCandlesBetween,   
-                         hiddenBearMinCandlesBetween,
-                         isShowBullDiv,
-                         isShowHiddenBullDiv,
-                         isShowBearDiv,
-                         isShowHiddenBearDiv             )
+    plotBearDiv(ghostBearDivNBack, ghostPivotHighNBack, true)
+    plotHiddenBearDiv(ghostHiddenBearDivNBack, ghostPivotHighNBack, true)
 
-plotDivergencesWithDifferentPivots(
-                                   nLeftStart,
-                                   nLeftEnd,
-                                   nLeftStep,
-                                   nRightStart,
-                                   nRightStep,
-                                   nBetweenMax,
-                                   nMaxBack,
-                                   bullishMinCandlesBetween,
-                                   hiddenBullishMinCandlesBetween,
-                                   bearMinCandlesBetween,
-                                   hiddenBearMinCandlesBetween,
-                                   isShowBullDiv,
-                                   isShowHiddenBullDiv,
-                                   isShowBearDiv,
-                                   isShowHiddenBearDiv
-                                  )
