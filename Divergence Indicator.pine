@@ -492,33 +492,39 @@ plotHiddenBearDiv(nBack1, nBack2, isGhost) =>
                       size=size.tiny,
                       tooltip=(isGhost ? "[ Unconfirmed ]" : "[ Confirmed ]") + " Hidden bearish divergence is an insightful concept in technical analysis, suggesting a continuation of a downtrend. It occurs when the price of an asset forms lower highs while the corresponding indicator (such as the Relative Strength Index or MACD) forms higher highs. This divergence signals that despite the temporary price rally, the underlying bearish momentum remains strong. Traders often interpret hidden bearish divergence as a warning sign to exercise caution in long positions or consider entering short positions, anticipating the downtrend to persist.")
 
-for i = 0 to int((nLeftEnd - nLeftStart) / nLeftStep)
-    nLeft  = nLeftStart + nLeftStep * i
-    nRight = nRightStart + nRightStep * i
+plotDivergences() =>
+    for i = 0 to int((nLeftEnd - nLeftStart) / nLeftStep)
+        nLeft  = nLeftStart + nLeftStep * i
+        nRight = nRightStart + nRightStep * i
+        
+        [bulDivNBack,
+         hiddenBulDivNBack,
+         
+         ghostBulDivNBack,
+         ghostHiddenBulDivNBack,
+         ghostPivotLowNBack,
+         
+         bearDivNBack,
+         hiddenBearDivNBack,
+         
+         ghostBearDivNBack,
+         ghostHiddenBearDivNBack,
+         ghostPivotHighNBack] = getDivergences(nLeft, nRight)
     
-    [bulDivNBack,
-     hiddenBulDivNBack,
-     
-     ghostBulDivNBack,
-     ghostHiddenBulDivNBack,
-     ghostPivotLowNBack,
-     
-     bearDivNBack,
-     hiddenBearDivNBack,
-     
-     ghostBearDivNBack,
-     ghostHiddenBearDivNBack,
-     ghostPivotHighNBack] = getDivergences(nLeft, nRight)
+        plotBulDiv(bulDivNBack, nRight, false)
+        plotHiddenBulDiv(hiddenBulDivNBack, nRight, false)
+    
+        plotBulDiv(ghostBulDivNBack, ghostPivotLowNBack, true)
+        plotHiddenBulDiv(ghostHiddenBulDivNBack, ghostPivotLowNBack, true)
+    
+        plotBearDiv(bearDivNBack, nRight, false)
+        plotHiddenBearDiv(hiddenBearDivNBack, nRight, false)
+    
+        plotBearDiv(ghostBearDivNBack, ghostPivotHighNBack, true)
+        plotHiddenBearDiv(ghostHiddenBearDivNBack, ghostPivotHighNBack, true)
 
-    plotBulDiv(bulDivNBack, nRight, false)
-    plotHiddenBulDiv(hiddenBulDivNBack, nRight, false)
+main() =>
+    plotDivergences()
 
-    plotBulDiv(ghostBulDivNBack, ghostPivotLowNBack, true)
-    plotHiddenBulDiv(ghostHiddenBulDivNBack, ghostPivotLowNBack, true)
-
-    plotBearDiv(bearDivNBack, nRight, false)
-    plotHiddenBearDiv(hiddenBearDivNBack, nRight, false)
-
-    plotBearDiv(ghostBearDivNBack, ghostPivotHighNBack, true)
-    plotHiddenBearDiv(ghostHiddenBearDivNBack, ghostPivotHighNBack, true)
+main()
 
