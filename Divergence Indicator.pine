@@ -4,29 +4,32 @@
 //@version=5
 indicator("Divergence Indicator", overlay=true)
 
-visibilityParamsGroupName = "Visibility"
+visibilityParamsGroupName  = "Visibility"
+isShowBullDiv              = input.bool(true, "Bullish divergence", group=visibilityParamsGroupName)
+isShowHiddenBullDiv        = input.bool(true, "Hidden bullish divergence", group=visibilityParamsGroupName)
+isShowBearDiv              = input.bool(true, "Bear divergence", group=visibilityParamsGroupName)
+isShowHiddenBearDiv        = input.bool(true, "Hidden bear divergence", group=visibilityParamsGroupName)
 
-isShowBullDiv             = input.bool(true, "Bullish divergence", group=visibilityParamsGroupName)
-isShowHiddenBullDiv       = input.bool(true, "Hidden bullish divergence", group=visibilityParamsGroupName)
-isShowBearDiv             = input.bool(true, "Bear divergence", group=visibilityParamsGroupName)
-isShowHiddenBearDiv       = input.bool(true, "Hidden bear divergence", group=visibilityParamsGroupName)
+isShowUnconfBullDiv        = input.bool(true, "Unconfirmed bullish divergence", group=visibilityParamsGroupName)
+isShowUnconfHiddenBullDiv  = input.bool(true, "Unconfirmed hidden bullish divergence", group=visibilityParamsGroupName)
+isShowUnconfBearDiv        = input.bool(true, "Unconfirmed bear divergence", group=visibilityParamsGroupName)
+isShowUnconfHiddenBearDiv  = input.bool(true, "Unconfirmed hidden bear divergence", group=visibilityParamsGroupName)
 
-isShowUnconfBullDiv       = input.bool(true, "Unconfirmed bullish divergence", group=visibilityParamsGroupName)
-isShowUnconfHiddenBullDiv = input.bool(true, "Unconfirmed hidden bullish divergence", group=visibilityParamsGroupName)
-isShowUnconfBearDiv       = input.bool(true, "Unconfirmed bear divergence", group=visibilityParamsGroupName)
-isShowUnconfHiddenBearDiv = input.bool(true, "Unconfirmed hidden bear divergence", group=visibilityParamsGroupName)
+isShowDivLine              = input.bool(true, "Lines", group=visibilityParamsGroupName)
+isShowDivLabel             = input.bool(true, "Label", group=visibilityParamsGroupName)
 
-isShowDivLine             = input.bool(true, "Lines", group=visibilityParamsGroupName)
-isShowDivLabel            = input.bool(true, "Label", group=visibilityParamsGroupName)
+candleParamsGroupName      = "Candle Parameters"
+nLeftStart                 = input.int(5, "Candles left start", group=candleParamsGroupName)
+nLeftStep                  = input.int(10, "Candles left step", group=candleParamsGroupName)
+nLeftEnd                   = input.int(25, "Candles left end", group=candleParamsGroupName)
+nRightStart                = input.int(5, "Candles right start", group=candleParamsGroupName)
+nRightStep                 = input.int(10, "Candles right step", group=candleParamsGroupName)
+maxInBetween               = input.int(0, "Pivots between max", group=candleParamsGroupName)
+nMaxBack                   = input.int(-1, "Max backcandles", group=candleParamsGroupName)
+nMaxBackIndicator          = input.int(1000, "Indicator max backcandles", group=candleParamsGroupName)
 
-candleParamsGroupName = "Candle Parameters"
-nLeftStart            = input.int(5, "Candles left start", group=candleParamsGroupName)
-nLeftStep             = input.int(10, "Candles left step", group=candleParamsGroupName)
-nLeftEnd              = input.int(25, "Candles left end", group=candleParamsGroupName)
-nRightStart           = input.int(5, "Candles right start", group=candleParamsGroupName)
-nRightStep            = input.int(10, "Candles right step", group=candleParamsGroupName)
-maxInBetween          = input.int(0, "Pivots between max", group=candleParamsGroupName)
-nMaxBack              = input.int(-1, "Max backcandles", group=candleParamsGroupName)
+developmentParamsGroupName = "Debugging (Do not change)"
+isCalcRSIWithoutTa         = input.bool(true, "Calculate RSI without ta", group=developmentParamsGroupName)
 
 if (nLeftStart + nLeftEnd) % nLeftStep != 0
     runtime.error("Invalid Configuration: Sum of left start and end value must be divisible by left step size.")
@@ -34,12 +37,93 @@ if (nLeftStart + nLeftEnd) % nLeftStep != 0
 if nLeftEnd < nLeftStart
     runtime.error("Invalid Configuration: Left end value must be lesser than left start value.")
 
-// !!!
-// Passing series as function arguments results in unwanted readings
-// !!!
+// series are not being passed as function arguments anymore, because the
+// readings get inconsistent, if accessed within nested function calls
+// => maybe pass as string and then get the value using getter method
 
-indicator = ta.rsi(close, 14)
-atr = ta.atr(14)
+// when using ta.rsi and then reading old values, the readings are inconsistent,
+// if accessed within nested function calls (i know ta.rsi needs to be called every iteration)
+// => writing it into an array seems to solve the issue
+
+// (doesn't need to be called every iteration)
+rsiArrayWithoutTa(length) =>
+    my_bar_index = math.min(bar_index, nMaxBackIndicator)
+
+    result = array.new<float>(my_bar_index + 1)
+
+    if my_bar_index >= length
+        cUp = 0.0
+        cDown = 0.0
+        
+        for i = my_bar_index to my_bar_index - length + 1
+            closePrev = close[i]
+            closeNext = close[i - 1]
+
+            if closeNext > closePrev
+                cUp += closeNext - closePrev
+            else if closeNext < closePrev
+                cDown += closePrev - closeNext
+            
+        prevSmmaUp = cUp / length
+        prevSmmaDown = cDown / length
+        rs = prevSmmaUp / prevSmmaDown
+        rsi = 100 - (100 / (1 + rs))
+        
+        array.set(result, my_bar_index - length, rsi)
+
+        if my_bar_index > length
+            for i = my_bar_index - length - 1 to 0
+                closePrev = close[i + 1]
+                closeNext = close[i]
+                
+                if closeNext > closePrev
+                    cUp := closeNext - closePrev
+                    cDown := 0
+                else if closeNext < closePrev
+                    cUp := 0
+                    cDown := closePrev - closeNext
+                else
+                    cUp := 0
+                    cDown := 0
+
+                currSmmaUp = (cUp + (prevSmmaUp * (length - 1))) / length
+                currSmmaDown = (cDown + (prevSmmaDown * (length - 1))) / length
+
+                rs := currSmmaUp / currSmmaDown
+                rsi := 100 - (100 / (1 + rs))
+
+                array.set(result, i, rsi)
+
+                prevSmmaUp := currSmmaUp
+                prevSmmaDown := currSmmaDown
+    
+    result
+
+rsiArrayWithTa(length) =>
+    my_bar_index = math.min(bar_index, nMaxBackIndicator)
+    
+    result = array.new<float>(my_bar_index + 1)
+    rsi = ta.rsi(close, 14)
+
+    for i = 0 to my_bar_index
+        array.set(result, i, rsi[i])
+    
+    result
+
+atrArray(length) =>
+    my_bar_index = math.min(bar_index, nMaxBackIndicator)
+    
+    result = array.new<float>(my_bar_index + 1)
+    atr = ta.atr(14)
+
+    for i = 0 to my_bar_index
+        array.set(result, i, atr[i])
+    
+    result
+
+// indicator needs to be an array, because as series the readings are inconsistent
+indicator = isCalcRSIWithoutTa ? rsiArrayWithoutTa(14) : rsiArrayWithTa(14)
+atr       = atrArray(14)
 
 getLowMinNBack(nBack, nLeft, nRight) =>
     // Boundary checks to ensure valid input parameters
@@ -179,6 +263,26 @@ getHighPivotsHigh(nBackStart, nBackEnd, nLeft, nRight, maxCount) =>
     
     result
 
+isBullishDivergence(nBack1, nBack2) =>
+    nBackPrev = math.max(nBack1, nBack2)
+    nBackNext = math.min(nBack1, nBack2)
+    low[nBackNext] < low[nBackPrev] and array.get(indicator, nBackNext) > array.get(indicator, nBackPrev)
+
+isHiddenBullishDivergence(nBack1, nBack2) =>
+    nBackPrev = math.max(nBack1, nBack2)
+    nBackNext = math.min(nBack1, nBack2)
+    low[nBackNext] > low[nBackPrev] and array.get(indicator, nBackNext) < array.get(indicator, nBackPrev)
+
+isBearishDivergence(nBack1, nBack2) =>
+    nBackPrev = math.max(nBack1, nBack2)
+    nBackNext = math.min(nBack1, nBack2)
+    high[nBackNext] > high[nBackPrev] and array.get(indicator, nBackNext) < array.get(indicator, nBackPrev)
+
+isHiddenBearishDivergence(nBack1, nBack2) =>
+    nBackPrev = math.max(nBack1, nBack2)
+    nBackNext = math.min(nBack1, nBack2)
+    high[nBackNext] < high[nBackPrev] and array.get(indicator, nBackNext) > array.get(indicator, nBackPrev)
+
 getDivergences(nLeft, nRight) =>
     if nMaxBack > 0 and nMaxBack <= nRight
         runtime.error("nMaxBack must be greater than nRight")
@@ -221,13 +325,13 @@ getDivergences(nLeft, nRight) =>
         for i = 0 to array.size(prevPivotsLow) - 1
             nBack = array.get(prevPivotsLow, i)
 
-            if bulDivNBack == -1 ? low[nRight] < low[nBack] and indicator[nRight] > indicator[nBack] : false
+            if bulDivNBack == -1 ? isBullishDivergence(nBack, nRight) : false
                 bulDivNBack := nBack
 
                 if hiddenBulDivNBack != -1
                     break
 
-            if hiddenBulDivNBack == -1 ? low[nRight] > low[nBack] and indicator[nRight] < indicator[nBack] : false
+            if hiddenBulDivNBack == -1 ? isHiddenBullishDivergence(nBack, nRight) : false
                 hiddenBulDivNBack := nBack
 
                 if bulDivNBack != -1
@@ -240,14 +344,14 @@ getDivergences(nLeft, nRight) =>
     if ghostPivotLowNBack != -1 and array.size(prevPivotsLow) > 0
         for i = 0 to array.size(prevPivotsLow) - 1
             nBack = array.get(prevPivotsLow, i)
-
-            if ghostBulDivNBack == -1 ? low[ghostPivotLowNBack] < low[nBack] and indicator[ghostPivotLowNBack] > indicator[nBack] : false
+            
+            if ghostBulDivNBack == -1 ? isBullishDivergence(nBack, ghostPivotLowNBack) : false
                 ghostBulDivNBack := nBack
 
                 if ghostHiddenBulDivNBack != -1
                     break
 
-            if ghostHiddenBulDivNBack == -1 ? low[ghostPivotLowNBack] > low[nBack] and indicator[ghostPivotLowNBack] < indicator[nBack] : false
+            if ghostHiddenBulDivNBack == -1 ? isHiddenBullishDivergence(nBack, ghostPivotLowNBack) : false
                 ghostHiddenBulDivNBack := nBack
 
                 if ghostBulDivNBack != -1
@@ -261,13 +365,13 @@ getDivergences(nLeft, nRight) =>
         for i = 0 to array.size(prevPivotsHigh) - 1
             nBack = array.get(prevPivotsHigh, i)
 
-            if bearDivNBack == -1 ? high[nRight] > high[nBack] and indicator[nRight] < indicator[nBack] : false
+            if bearDivNBack == -1 ? isBearishDivergence(nBack, nRight) : false
                 bearDivNBack := nBack
 
                 if hiddenBearDivNBack != -1
                     break
 
-            if hiddenBearDivNBack == -1 ? high[nRight] < high[nBack] and indicator[nRight] > indicator[nBack] : false
+            if hiddenBearDivNBack == -1 ? isHiddenBearishDivergence(nBack, nRight) : false
                 hiddenBearDivNBack := nBack
 
                 if bearDivNBack != -1
@@ -280,14 +384,14 @@ getDivergences(nLeft, nRight) =>
     if ghostPivotHighNBack != -1 and array.size(prevPivotsHigh) > 0
         for i = 0 to array.size(prevPivotsHigh) - 1
             nBack = array.get(prevPivotsHigh, i)
-
-            if ghostBearDivNBack == -1 ? high[ghostPivotHighNBack] > high[nBack] and indicator[ghostPivotHighNBack] < indicator[nBack] : false
+            
+            if ghostBearDivNBack == -1 ? isBearishDivergence(nBack, ghostPivotHighNBack) : false
                 ghostBearDivNBack := nBack
 
                 if ghostHiddenBearDivNBack != -1
                     break
 
-            if hiddenBearDivNBack == -1 ? high[ghostPivotHighNBack] < high[nBack] and indicator[ghostPivotHighNBack] > indicator[nBack] : false
+            if hiddenBearDivNBack == -1 ? isHiddenBearishDivergence(nBack, ghostPivotHighNBack) : false
                 ghostHiddenBearDivNBack := nBack
 
                 if ghostBearDivNBack != -1
@@ -319,7 +423,7 @@ plotBulDiv(nBack1, nBack2, isGhost) =>
 
         if isShowDivLabel
             label.new(x=bar_index - nBack2,
-                      y=low[nBack2] - atr[nBack2] * 0.3,
+                      y=low[nBack2] - array.get(atr, nBack2) * 0.3,
                       text=isGhost ? "👻" : "🦄",
                       style=label.style_label_up,
                       color=color.green,
@@ -338,7 +442,7 @@ plotHiddenBulDiv(nBack1, nBack2, isGhost) =>
         
         if isShowDivLabel
             label.new(x=bar_index - nBack2,
-                      y=low[nBack2] - atr[nBack2] * 0.3,
+                      y=low[nBack2] - array.get(atr, nBack2) * 0.3,
                       text=isGhost ? "👻" : "🦄",
                       style=label.style_label_up,
                       color=color.green,
@@ -357,7 +461,7 @@ plotBearDiv(nBack1, nBack2, isGhost) =>
 
         if isShowDivLabel
             label.new(x=bar_index - nBack2,
-                      y=high[nBack2] + atr[nBack2] * 0.3,
+                      y=high[nBack2] + array.get(atr, nBack2) * 0.3,
                       text=isGhost ? "👻" : "🐻",
                       style=label.style_label_down,
                       color=color.red,
@@ -376,7 +480,7 @@ plotHiddenBearDiv(nBack1, nBack2, isGhost) =>
 
         if isShowDivLabel
             label.new(x=bar_index - nBack2,
-                      y=high[nBack2] + atr[nBack2] * 0.3,
+                      y=high[nBack2] + array.get(atr, nBack2) * 0.3,
                       text=isGhost ? "👻" : "🐻",
                       style=label.style_label_down,
                       color=color.red,
