@@ -15,6 +15,11 @@ isShowUnconfHiddenBullDiv  = input.bool(true, "Unconfirmed hidden bullish diverg
 isShowUnconfBearDiv        = input.bool(true, "Unconfirmed bear divergence", group=visibilityParamsGroupName)
 isShowUnconfHiddenBearDiv  = input.bool(true, "Unconfirmed hidden bear divergence", group=visibilityParamsGroupName)
 
+bullDivLineColor           = input.color(color.new(color.blue, 50), "Bullish Divergence Line", group=visibilityParamsGroupName)
+hiddenBullDivLineColor     = input.color(color.new(color.blue, 50), "Hidden Bullish Divergence Line", group=visibilityParamsGroupName)
+bearDivLineColor           = input.color(color.new(color.orange, 50), "Bearish Divergence Line", group=visibilityParamsGroupName)
+hiddenBearDivLineColor     = input.color(color.new(color.orange, 50), "Hidden Bearish Divergence Line", group=visibilityParamsGroupName)
+
 isShowDivLine              = input.bool(true, "Lines", group=visibilityParamsGroupName)
 isShowDivLabel             = input.bool(true, "Label", group=visibilityParamsGroupName)
 
@@ -418,7 +423,7 @@ plotBulDiv(nBack1, nBack2, isGhost) =>
                      y1=low[nBack1],
                      x2=bar_index - nBack2,
                      y2=low[nBack2],
-                     color=color.blue,
+                     color=bullDivLineColor,
                      style=line.style_dotted)
 
         if isShowDivLabel
@@ -437,7 +442,7 @@ plotHiddenBulDiv(nBack1, nBack2, isGhost) =>
                      y1=low[nBack1],
                      x2=bar_index - nBack2,
                      y2=low[nBack2],
-                     color=color.blue,
+                     color=hiddenBullDivLineColor,
                      style=line.style_dotted)
         
         if isShowDivLabel
@@ -456,7 +461,7 @@ plotBearDiv(nBack1, nBack2, isGhost) =>
                      y1=high[nBack1],
                      x2=bar_index - nBack2,
                      y2=high[nBack2],
-                     color=color.orange,
+                     color=bearDivLineColor,
                      style=line.style_dotted)
 
         if isShowDivLabel
@@ -475,7 +480,7 @@ plotHiddenBearDiv(nBack1, nBack2, isGhost) =>
                      y1=high[nBack1],
                      x2=bar_index - nBack2,
                      y2=high[nBack2],
-                     color=color.orange,
+                     color=hiddenBearDivLineColor,
                      style=line.style_dotted)
 
         if isShowDivLabel
