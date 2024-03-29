@@ -23,6 +23,8 @@ hiddenBearDivLineColor     = input.color(color.new(color.orange, 50), "Hidden Be
 isShowDivLine              = input.bool(true, "Lines", group=visibilityParamsGroupName)
 isShowDivLabel             = input.bool(true, "Label", group=visibilityParamsGroupName)
 
+atrPosFactor               = input.float(0.3, "ATR position factor")
+
 candleParamsGroupName      = "Candle Parameters"
 nLeftStart                 = input.int(5, "Candles left start", group=candleParamsGroupName)
 nLeftStep                  = input.int(10, "Candles left step", group=candleParamsGroupName)
@@ -428,7 +430,7 @@ plotBulDiv(nBack1, nBack2, isGhost) =>
 
         if isShowDivLabel
             label.new(x=bar_index - nBack2,
-                      y=low[nBack2] - array.get(atr, nBack2) * 0.3,
+                      y=low[nBack2] - array.get(atr, nBack2) * atrPosFactor,
                       text=isGhost ? "👻" : "🦄",
                       style=label.style_label_up,
                       color=color.green,
@@ -447,7 +449,7 @@ plotHiddenBulDiv(nBack1, nBack2, isGhost) =>
         
         if isShowDivLabel
             label.new(x=bar_index - nBack2,
-                      y=low[nBack2] - array.get(atr, nBack2) * 0.3,
+                      y=low[nBack2] - array.get(atr, nBack2) * atrPosFactor,
                       text=isGhost ? "👻" : "🦄",
                       style=label.style_label_up,
                       color=color.green,
@@ -466,7 +468,7 @@ plotBearDiv(nBack1, nBack2, isGhost) =>
 
         if isShowDivLabel
             label.new(x=bar_index - nBack2,
-                      y=high[nBack2] + array.get(atr, nBack2) * 0.3,
+                      y=high[nBack2] + array.get(atr, nBack2) * atrPosFactor,
                       text=isGhost ? "👻" : "🐻",
                       style=label.style_label_down,
                       color=color.red,
@@ -485,7 +487,7 @@ plotHiddenBearDiv(nBack1, nBack2, isGhost) =>
 
         if isShowDivLabel
             label.new(x=bar_index - nBack2,
-                      y=high[nBack2] + array.get(atr, nBack2) * 0.3,
+                      y=high[nBack2] + array.get(atr, nBack2) * atrPosFactor,
                       text=isGhost ? "👻" : "🐻",
                       style=label.style_label_down,
                       color=color.red,
