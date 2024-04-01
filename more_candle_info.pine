@@ -14,17 +14,17 @@ is_bullish = close > open
 is_bearish = close < open
 
 export spread() => spread
-export spread(int nBack) => spread[nBack]
+export spread(int n_back) => spread[n_back]
 export body_low() => body_low
-export body_low(int nBack) => body_low[nBack]
+export body_low(int n_back) => body_low[n_back]
 export body_high() => body_high
-export body_high(int nBack) => body_high[nBack]
+export body_high(int n_back) => body_high[n_back]
 export body() => body
-export body(int nBack) => body[nBack]
-export absBody() => abs_body
-export absBody(int nBack) => abs_body[nBack]
+export body(int n_back) => body[n_back]
+export abs_body() => abs_body
+export abs_body(int n_back) => abs_body[n_back]
 export is_bullish() => is_bullish
-export is_bullish(int nBack) => is_bullish[nBack]
+export is_bullish(int n_back) => is_bullish[n_back]
 export is_bearish() => is_bearish
-export is_bearish(int nBack) => is_bearish[nBack]
+export is_bearish(int n_back) => is_bearish[n_back]
 
