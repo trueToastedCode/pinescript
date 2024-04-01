@@ -1,0 +1,30 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © iFlyTheMoon
+
+//@version=5
+
+library("MoreCandleInfo", overlay=true)
+
+spread     = high - low
+body_low   = math.min(open, close)
+body_high  = math.max(open, close)
+body       = close - open
+abs_body   = math.abs(body)
+is_bullish = close > open
+is_bearish = close < open
+
+export spread() => spread
+export spread(int nBack) => spread[nBack]
+export body_low() => body_low
+export body_low(int nBack) => body_low[nBack]
+export body_high() => body_high
+export body_high(int nBack) => body_high[nBack]
+export body() => body
+export body(int nBack) => body[nBack]
+export absBody() => abs_body
+export absBody(int nBack) => abs_body[nBack]
+export is_bullish() => is_bullish
+export is_bullish(int nBack) => is_bullish[nBack]
+export is_bearish() => is_bearish
+export is_bearish(int nBack) => is_bearish[nBack]
+
