@@ -1,0 +1,150 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © iFlyTheMoon
+
+//@version=5
+
+library("CandleSignals", overlay=true)
+
+TYPE_NEUTRAL = 0
+TYPE_BEARISH = 1
+TYPE_BULLISH = 2
+
+export type_neutral() => TYPE_NEUTRAL
+export type_bearish() => TYPE_BEARISH
+export type_bullish() => TYPE_BULLISH
+
+export type CandleSignal
+	string name
+	string description
+	int    signal_type
+
+export type CandleSignals
+	array<CandleSignal> candle_signals
+	label               label_neutral
+	label               label_bearish
+	label               label_bullish
+
+validateSignalType(int signal_type) =>
+	if signal_type < 0 or signal_type > 2
+		runtime.error(str.format("Unexpected signal type: {0}", signal_type))
+
+isAnyCandleSignal(CandleSignals id) =>
+	na(id.candle_signals) ? false : array.size(id.candle_signals) != 0
+
+prePlot(CandleSignals id) =>
+	nNeutral = 0
+	nBearish = 0
+	nBullish = 0
+	neutralDescription = ""
+	bearishDescription = ""
+	bullishDescription = ""
+	if isAnyCandleSignal(id)
+		for i = 0 to array.size(id.candle_signals) - 1
+			signal = array.get(id.candle_signals, i)
+			if signal.signal_type == TYPE_NEUTRAL
+				nNeutral += 1
+				neutralDescription += str.format("({0}) {1}: {2}\n", nNeutral, signal.name, signal.description)
+			else if signal.signal_type == TYPE_BEARISH
+				nBearish += 1
+				bearishDescription += str.format("({0}) {1}: {2}\n", nBearish, signal.name, signal.description)
+			else if signal.signal_type == TYPE_BULLISH
+				nBullish += 1
+				bullishDescription += str.format("({0}) {1}: {2}\n", nBullish, signal.name, signal.description)
+			else
+				runtime.error(str.format("Unexpected signal type: {0}", signal.signal_type))
+	if nNeutral != 0
+		neutralDescription := str.trim("[ Neutral ]\n" + neutralDescription)
+	if nBearish!= 0
+		bearishDescription := str.trim("[ Bearish ]\n" + bearishDescription)
+	if nBullish!= 0
+		bullishDescription := str.trim("[ Bullish ]\n" + bullishDescription)
+	[nNeutral, neutralDescription, nBearish, bearishDescription, nBullish, bullishDescription]
+
+plot_neutral(CandleSignals id, int nNeutral, string description) =>
+	if na(id.label_neutral)
+	    id.label_neutral := label.new(x=bar_index,
+                                      y=na,
+	    							  yloc=yloc.belowbar,
+									  style=label.style_none,
+	    							  textcolor=color.blue)
+	if nNeutral == 0
+		label.set_text(id.label_neutral, na)
+		label.set_tooltip(id.label_neutral, na)
+	else
+		label.set_text(id.label_neutral, str.tostring(nNeutral))
+		label.set_tooltip(id.label_neutral, description)
+	id.label_neutral
+
+plot_bearish(CandleSignals id, int nBearish, string description) =>
+	if na(id.label_bearish)
+	    id.label_bearish := label.new(x=bar_index,
+		                              y=na,
+	    							  yloc=yloc.abovebar,
+									  style=label.style_none,
+	    							  textcolor=color.red)
+	if nBearish == 0
+		label.set_text(id.label_bearish, na)
+		label.set_tooltip(id.label_bearish, na)
+	else
+		label.set_text(id.label_bearish, str.tostring(nBearish))
+		label.set_tooltip(id.label_bearish, description)
+	id.label_bearish
+
+plot_bullish(CandleSignals id, int nBullish, string description, bool isNeedSpace) =>
+	if na(id.label_bullish)
+	    id.label_bullish := label.new(x=bar_index,
+                                      y=na,
+	    							  yloc=yloc.belowbar,
+									  style=label.style_none,
+	    							  textcolor=color.green)
+	if nBullish == 0
+		label.set_text(id.label_bullish, na)
+		label.set_tooltip(id.label_bullish, na)
+	else
+		label.set_text(id.label_bullish, isNeedSpace ? str.format("\n{0}", nBullish) : str.tostring(nBullish))
+		label.set_tooltip(id.label_bullish, description)
+	id.label_bullish
+
+export init() =>
+	CandleSignals.new(na, na, na, na)
+
+export addCandleSignal(CandleSignals id, string name, string description, int signal_type) =>
+	validateSignalType(signal_type)
+	signal = CandleSignal.new(name, description, signal_type)
+	if na(id.candle_signals)
+		id.candle_signals := array.from<CandleSignal>(signal)
+	else
+		array.push(id.candle_signals, signal)
+	signal
+
+export removeCandleSignal(CandleSignals id, string name) =>
+	result = false
+	if isAnyCandleSignal(id)
+	    for i = 0 to array.size(id.candle_signals) - 1
+	    	if array.get(id.candle_signals, i).name != name
+	    		continue
+	    	array.remove(id.candle_signals, i)
+	    	result := true
+	result
+
+export plot_candle_signals(CandleSignals id) =>
+	[nNeutral, neutralDescription, nBearish, bearishDescription, nBullish, bullishDescription] = prePlot(id)
+	plot_neutral(id, nNeutral, nBullish == 0 ? neutralDescription : na)
+	plot_bearish(id, nBearish, bearishDescription)
+	plot_bullish(id, nBullish, nNeutral == 0 ? bullishDescription : str.format("{0}\n\n{1}", neutralDescription, bullishDescription), nNeutral != 0)
+
+candle_signals = init()
+plot_candle_signals(candle_signals)
+
+// if barstate.islastconfirmedhistory
+// 	// add signal to history
+// 	offset = 5
+// 	addCandleSignal(candle_signals[offset], "Foo", "Bar", type_neutral())
+// 	addCandleSignal(candle_signals[5], "Foo", "Bar", type_bullish())
+// 	addCandleSignal(candle_signals[5], "Foo", "Bar", type_bearish())
+// 	plot_candle_signals(candle_signals[offset])
+
+// 	// add signal now
+// 	addCandleSignal(candle_signals, "Foo", "Bar", type_bullish())
+// 	plot_candle_signals(candle_signals)
+
