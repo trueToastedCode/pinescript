@@ -51,7 +51,7 @@ export type CandlePattern
 process_hammer(CandlePattern id) =>
 	for _ = 0 to 0
 		more_candle_info = array.first(id.more_candle_info)
-		if more_candle_info.shadow_high / more_candle_info.spread >= 0.02
+		if more_candle_info.shadow_high / more_candle_info.spread >= 0.1
 			break
 		if more_candle_info.shadow_low / more_candle_info.abs_body < 2.
 			break
