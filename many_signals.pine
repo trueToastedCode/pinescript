@@ -1,0 +1,22 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © iFlyTheMoon
+
+//@version=5
+indicator("ManySignals", overlay=true, max_labels_count=500)
+
+import iFlyTheMoon/MoreCandleInfo/1
+import iFlyTheMoon/CandleSignals/1
+import iFlyTheMoon/CandlePattern/1
+
+MAX_N_BACK = 499
+
+curr_max_n_back = math.min(bar_index, MAX_N_BACK)
+
+more_candle_info = MoreCandleInfo.init()
+more_candle_info_arr = MoreCandleInfo.arrayify(more_candle_info, curr_max_n_back)
+
+candle_signals = CandleSignals.init()
+candle_pattern = CandlePattern.init(candle_signals, more_candle_info_arr)
+
+CandleSignals.plot_candle_signals(candle_signals)
+
