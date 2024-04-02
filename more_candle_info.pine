@@ -5,26 +5,27 @@
 
 library("MoreCandleInfo", overlay=true)
 
-spread     = high - low
-body_low   = math.min(open, close)
-body_high  = math.max(open, close)
-body       = close - open
-abs_body   = math.abs(body)
-is_bullish = close > open
-is_bearish = close < open
+export type MoreCandleInfo
+	float spread
+    float body_low
+    float body_high
+    float body   
+    float abs_body
+    bool  is_bullish
+    bool  is_bearish
 
-export spread() => spread
-export spread(int n_back) => spread[n_back]
-export body_low() => body_low
-export body_low(int n_back) => body_low[n_back]
-export body_high() => body_high
-export body_high(int n_back) => body_high[n_back]
-export body() => body
-export body(int n_back) => body[n_back]
-export abs_body() => abs_body
-export abs_body(int n_back) => abs_body[n_back]
-export is_bullish() => is_bullish
-export is_bullish(int n_back) => is_bullish[n_back]
-export is_bearish() => is_bearish
-export is_bearish(int n_back) => is_bearish[n_back]
+export init() =>
+    MoreCandleInfo.new(spread=high - low,
+                       body_low=math.min(open, close),
+					   body_high=math.max(open, close),
+					   body=close - open,
+					   abs_body=math.abs(close - open),
+					   is_bullish=close > open,
+					   is_bearish=close < open)
+
+export arrayify(series MoreCandleInfo id, int n_back) =>
+	array<MoreCandleInfo> result = array.new<MoreCandleInfo>(n_back + 1)
+	for i = 0 to n_back
+		array.set(result, i, id[i])
+	result
 
