@@ -11,15 +11,21 @@ export type MoreCandleInfo
     float body_high
     float body   
     float abs_body
+	float shadow_low
+	float shadow_high
     bool  is_bullish
     bool  is_bearish
 
 export init() =>
+	body_low = math.min(open, close)
+	body_high = math.max(open, close)
     MoreCandleInfo.new(spread=high - low,
-                       body_low=math.min(open, close),
-					   body_high=math.max(open, close),
+                       body_low=body_low,
+					   body_high=body_high,
 					   body=close - open,
 					   abs_body=math.abs(close - open),
+					   shadow_low=body_low - low,
+					   shadow_high=high - body_high,
 					   is_bullish=close > open,
 					   is_bearish=close < open)
 
