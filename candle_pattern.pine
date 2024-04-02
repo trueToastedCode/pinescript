@@ -100,11 +100,11 @@ add_doji_signal(CandlePattern id) =>
 	if na(id.candle_pattern_result.type_doji)
 		na
 	else if id.candle_pattern_result.type_doji == TYPE_DOJI_DRAGONFLY
-		CandleSignals.addCandleSignal(id.candle_signals, NAME_DOJI_DRAGONFLY, DESC_DOJI_DRAGONFLY, CandleSignals.type_bearish())
+		CandleSignals.addCandleSignal(id.candle_signals, NAME_DOJI_DRAGONFLY, DESC_DOJI_DRAGONFLY, CandleSignals.type_bullish())
 	else if id.candle_pattern_result.type_doji == TYPE_DOJI_LONG_LEGGED
 		CandleSignals.addCandleSignal(id.candle_signals, NAME_DOJI_LONG_LEGGED, DESC_DOJI_LONG_LEGGED, CandleSignals.type_neutral())
 	else if id.candle_pattern_result.type_doji == TYPE_DOJI_GRAVESTONE
-		CandleSignals.addCandleSignal(id.candle_signals, NAME_DOJI_GRAVESTONE, DESC_DOJI_GRAVESTONE, CandleSignals.type_bullish())
+		CandleSignals.addCandleSignal(id.candle_signals, NAME_DOJI_GRAVESTONE, DESC_DOJI_GRAVESTONE, CandleSignals.type_bearish())
 
 add_engulfing_signal(CandlePattern id) =>
 	if na(id.candle_pattern_result.type_engulfing)
