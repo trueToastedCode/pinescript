@@ -73,3 +73,9 @@ export init(CandleSignals.CandleSignals candle_signals, array<MoreCandleInfo.Mor
 	add_candle_signals(candle_pattern)
 	candle_pattern.candle_pattern_result
 
+export arrayify(series CandlePatternResult id, int n_back) =>
+	result = array.new<CandlePatternResult>(n_back + 1)
+	for i = 0 to n_back
+		array.set(result, i, id[i])
+	result
+
