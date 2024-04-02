@@ -8,24 +8,33 @@ library("CandlePattern", overlay=true)
 import iFlyTheMoon/CandleSignals/1
 import iFlyTheMoon/MoreCandleInfo/1
 
-TYPE_DOJI_DRAGONFLY   = 0
-TYPE_DOJI_LONG_LEGGED = 1
-TYPE_DOJI_GRAVESTONE  = 2
+TYPE_DOJI_DRAGONFLY    = 0
+TYPE_DOJI_LONG_LEGGED  = 1
+TYPE_DOJI_GRAVESTONE   = 2
+TYPE_BULLISH_ENGULFING = 3
+TYPE_BEARISH_ENGULFING = 4
 
-NAME_DOJI_DRAGONFLY   = "Dragonfly Doji"
-NAME_DOJI_LONG_LEGGED = "Long-legged Doji"
-NAME_DOJI_GRAVESTONE  = "Gravestone Doji"
+NAME_DOJI_DRAGONFLY    = "Dragonfly Doji"
+NAME_DOJI_LONG_LEGGED  = "Long-legged Doji"
+NAME_DOJI_GRAVESTONE   = "Gravestone Doji"
+NAME_BULLISH_ENGULFING = "Bullish Engulfing"
+NAME_BEARISH_ENGULFING = "Bearish Engulfing"
 
-DESC_DOJI_DRAGONFLY   = "Often appears at the bottom of a downtrend and suggests a potential reversal to the upside. It indicates that despite the bearish pressure, buyers were able to push the price back up to the session's opening level, signaling potential strength."
-DESC_DOJI_LONG_LEGGED = "Signifies indecision in the market. It suggests a potential reversal or continuation depending on the preceding trend and subsequent price action."
-DESC_DOJI_GRAVESTONE  = "Typically occurs at the top of an uptrend and indicates a potential reversal to the downside. It suggests that despite bullish attempts to push the price higher, sellers were able to drive the price back down to the opening level by the close of the session."
+DESC_DOJI_DRAGONFLY    = "Often appears at the bottom of a downtrend and suggests a potential reversal to the upside. It indicates that despite the bearish pressure, buyers were able to push the price back up to the session's opening level, signaling potential strength."
+DESC_DOJI_LONG_LEGGED  = "Signifies indecision in the market. It suggests a potential reversal or continuation depending on the preceding trend and subsequent price action."
+DESC_DOJI_GRAVESTONE   = "Typically occurs at the top of an uptrend and indicates a potential reversal to the downside. It suggests that despite bullish attempts to push the price higher, sellers were able to drive the price back down to the opening level by the close of the session."
+DESC_BULLISH_ENGULFING = "Buying pressure overwhelming selling pressure, implying an uptrend."
+DESC_BEARISH_ENGULFING = "Selling pressure overwhelming buying pressure, implying a downtrend."
 
 export type_doji_dragonfly() => TYPE_DOJI_DRAGONFLY
 export type_doji_long_legged() => TYPE_DOJI_LONG_LEGGED
 export type_doji_gravestone() => TYPE_DOJI_GRAVESTONE
+export type_bullish_engulfing() => TYPE_BULLISH_ENGULFING
+export type_bearish_engulfing() => TYPE_BEARISH_ENGULFING
 
 export type CandlePatternResult
 	int type_doji
+	int type_engulfing
 
 export type CandlePattern
 	CandleSignals.CandleSignals          candle_signals
@@ -49,6 +58,18 @@ process_doji_signal(CandlePattern id) =>
 			id.candle_pattern_result.type_doji := TYPE_DOJI_GRAVESTONE
 			break
 
+process_engulfing_signal(CandlePattern id) =>
+	for _ = 0 to 0
+		if array.size(id.more_candle_info) < 2
+			break
+		more_candle_info = array.first(id.more_candle_info)
+        prev_more_candle_info = array.get(id.more_candle_info, 1)
+		if more_candle_info.is_bullish and prev_more_candle_info.is_bearish and more_candle_info.body_low < prev_more_candle_info.body_low and more_candle_info.body_high > prev_more_candle_info.body_high
+			id.candle_pattern_result.type_engulfing := TYPE_BULLISH_ENGULFING
+			break
+		if more_candle_info.is_bearish and prev_more_candle_info.is_bullish and more_candle_info.body_low < prev_more_candle_info.body_low and more_candle_info.body_high > prev_more_candle_info.body_high
+			id.candle_pattern_result.type_engulfing := TYPE_BEARISH_ENGULFING
+
 add_doji_signal(CandlePattern id) =>
 	if na(id.candle_pattern_result.type_doji)
 		na
@@ -59,16 +80,27 @@ add_doji_signal(CandlePattern id) =>
 	else if id.candle_pattern_result.type_doji == TYPE_DOJI_GRAVESTONE
 		CandleSignals.addCandleSignal(id.candle_signals, NAME_DOJI_GRAVESTONE, DESC_DOJI_GRAVESTONE, CandleSignals.type_bullish())
 
+add_engulfing_signal(CandlePattern id) =>
+	if na(id.candle_pattern_result.type_engulfing)
+        na
+	else if id.candle_pattern_result.type_engulfing == TYPE_BULLISH_ENGULFING
+        CandleSignals.addCandleSignal(id.candle_signals, NAME_BULLISH_ENGULFING, DESC_BULLISH_ENGULFING, CandleSignals.type_bullish())
+    else if id.candle_pattern_result.type_engulfing == TYPE_BEARISH_ENGULFING
+        CandleSignals.addCandleSignal(id.candle_signals, NAME_BEARISH_ENGULFING, DESC_BEARISH_ENGULFING, CandleSignals.type_bearish())
+
 process_candle_patterns(CandlePattern id) =>
 	process_doji_signal(id)
+	process_engulfing_signal(id)
 
 add_candle_signals(CandlePattern id) =>
 	add_doji_signal(id)
+	add_engulfing_signal(id)
 
 export init(CandleSignals.CandleSignals candle_signals, array<MoreCandleInfo.MoreCandleInfo> more_candle_info) =>
 	candle_pattern = CandlePattern.new(candle_signals=candle_signals,
                                        more_candle_info=more_candle_info,
-                                       candle_pattern_result=CandlePatternResult.new(type_doji=na))
+                                       candle_pattern_result=CandlePatternResult.new(type_doji=na,
+                                                                                     type_engulfing=na))
 	process_candle_patterns(candle_pattern)
 	add_candle_signals(candle_pattern)
 	candle_pattern.candle_pattern_result
