@@ -55,6 +55,8 @@ process_hammer(CandlePattern id) =>
 			break
 		if more_candle_info.shadow_low / more_candle_info.abs_body < 2.
 			break
+		if more_candle_info.abs_body / more_candle_info.spread < 0.1
+			break
 		if more_candle_info.is_bullish
 	    	id.candle_pattern_result.type_hammer := TYPE_BULLISH_HAMMER
 			break
@@ -66,17 +68,13 @@ process_doji_signal(CandlePattern id) =>
 		more_candle_info = array.first(id.more_candle_info)
 		if more_candle_info.abs_body / more_candle_info.spread >= 0.1
 			break
-		sep_low = low + more_candle_info.spread * (1. / 3)	
-	    sep_high = high - more_candle_info.spread * (1. / 3)
-		if more_candle_info.body_low > sep_high
+		if more_candle_info.shadow_high / more_candle_info.spread < 0.2
 			id.candle_pattern_result.type_doji := TYPE_DOJI_DRAGONFLY
 			break
-		if more_candle_info.body_low >= sep_low and more_candle_info.body_high <= sep_high
-			id.candle_pattern_result.type_doji := TYPE_DOJI_LONG_LEGGED
-			break
-		if more_candle_info.body_high < sep_low
+		if more_candle_info.shadow_low / more_candle_info.spread < 0.2
 			id.candle_pattern_result.type_doji := TYPE_DOJI_GRAVESTONE
 			break
+		id.candle_pattern_result.type_doji := TYPE_DOJI_LONG_LEGGED
 
 process_engulfing_signal(CandlePattern id) =>
 	for _ = 0 to 0
