@@ -133,18 +133,9 @@ export plot_candle_signals(CandleSignals id) =>
 	plot_bearish(id, nBearish, bearishDescription)
 	plot_bullish(id, nBullish, nNeutral == 0 ? bullishDescription : str.format("{0}\n\n{1}", neutralDescription, bullishDescription), nNeutral != 0)
 
-candle_signals = init()
-plot_candle_signals(candle_signals)
-
-// if barstate.islastconfirmedhistory
-// 	// add signal to history
-// 	offset = 5
-// 	addCandleSignal(candle_signals[offset], "Foo", "Bar", type_neutral())
-// 	addCandleSignal(candle_signals[5], "Foo", "Bar", type_bullish())
-// 	addCandleSignal(candle_signals[5], "Foo", "Bar", type_bearish())
-// 	plot_candle_signals(candle_signals[offset])
-
-// 	// add signal now
-// 	addCandleSignal(candle_signals, "Foo", "Bar", type_bullish())
-// 	plot_candle_signals(candle_signals)
+export arrayify(series CandleSignals id, int n_back) =>
+	result = array.new<CandleSignals>(n_back + 1)
+	for i = 0 to n_back
+		array.set(result, i, id[i])
+	result
 
