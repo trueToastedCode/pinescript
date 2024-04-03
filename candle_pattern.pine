@@ -17,8 +17,12 @@ TYPE_DOJI_LONG_LEGGED        = 1
 TYPE_DOJI_GRAVESTONE         = 2
 TYPE_BULLISH_SPINNING_TOP    = 0
 TYPE_BEARISH_SPINNING_TOP    = 1
+TYPE_BULLISH_KICKER          = 0
+TYPE_BEARISH_KICKER          = 1
 TYPE_BULLISH_ENGULFING       = 0
 TYPE_BEARISH_ENGULFING       = 1
+TYPE_BULLISH_HARAMI          = 0
+TYPE_BEARISH_HARAMI          = 1
 
 NAME_BULLISH_HAMMER          = "Bullish Hammer"
 NAME_BEARISH_HAMMER          = "Bearish Hammer (Hanging Man)"
@@ -29,8 +33,12 @@ NAME_DOJI_LONG_LEGGED        = "Long-legged Doji"
 NAME_DOJI_GRAVESTONE         = "Gravestone Doji"
 NAME_BULLISH_SPINNING_TOP    = "Bullish Spinning Top"
 NAME_BEARISH_SPINNING_TOP    = "Bearish Spinning Top"
+// NAME_BULLISH_KICKER          = "Bullish Kicker"
+// NAME_BEARISH_KICKER          = "Bearish Kicker"
 NAME_BULLISH_ENGULFING       = "Bullish Engulfing"
 NAME_BEARISH_ENGULFING       = "Bearish Engulfing"
+NAME_BULLISH_HARAMI          = "Bullish Harami"
+NAME_BEARISH_HARAMI          = "Bearish Harami"
 
 DESC_BULLISH_HAMMER          = "Typically occur after a price decline. Indicate a potential price reversal to the upside."
 DESC_BEARISH_HAMMER          = "Typically occur after a price increase. Indicate a potential price reversal to the downside."
@@ -41,8 +49,12 @@ DESC_DOJI_LONG_LEGGED        = "Signifies indecision in the market. It suggests 
 DESC_DOJI_GRAVESTONE         = "Typically occurs at the top of an uptrend and indicates a potential reversal to the downside. It suggests that despite bullish attempts to push the price higher, sellers were able to drive the price back down to the opening level by the close of the session."
 DESC_BULLISH_SPINNING_TOP    = "If the spinning top occurs at the bottom of a downtrend, it could signal that a bullish reversal may happen. Conversely, if the spinning top occurs at the top of an uptrend, it could suggest a bearish reversal. It may also suggest a sideways movement."
 DESC_BEARISH_SPINNING_TOP    = "If the spinning top occurs at the bottom of a downtrend, it could signal that a bullish reversal may happen. Conversely, if the spinning top occurs at the top of an uptrend, it could suggest a bearish reversal. It may also suggest a sideways movement."
+// DESC_BULLISH_KICKER          = ""
+// DESC_BEARISH_KICKER          = ""
 DESC_BULLISH_ENGULFING       = "Buying pressure overwhelming selling pressure, implying an uptrend."
 DESC_BEARISH_ENGULFING       = "Selling pressure overwhelming buying pressure, implying a downtrend."
+DESC_BULLISH_HARAMI          = "Suggests that a bearish trend may be coming to end."
+DESC_BEARISH_HARAMI          = "Suggests that a bullish trend may be coming to end."
 
 export type_bullish_hammer() => TYPE_BULLISH_HAMMER
 export type_bearish_hammer() => TYPE_BEARISH_HAMMER
@@ -53,6 +65,8 @@ export type_doji_long_legged() => TYPE_DOJI_LONG_LEGGED
 export type_doji_gravestone() => TYPE_DOJI_GRAVESTONE
 export type_bullish_spinning_top() => TYPE_BULLISH_SPINNING_TOP
 export type_bearish_spinning_top() => TYPE_BEARISH_SPINNING_TOP
+// export type_bullish_kicker() => TYPE_BULLISH_KICKER
+// export type_bearish_kicker() => TYPE_BEARISH_KICKER
 export type_bullish_engulfing() => TYPE_BULLISH_ENGULFING
 export type_bearish_engulfing() => TYPE_BEARISH_ENGULFING
 
@@ -61,7 +75,9 @@ export type CandlePatternResult
 	int type_inverted_hammer
 	int type_doji
 	int type_spinning_top
+    int type_kicker
 	int type_engulfing
+    int type_harami
 
 export type CandlePattern
 	CandleSignals.CandleSignals          candle_signals
@@ -129,6 +145,22 @@ process_spinning_top_signal(CandlePattern id) =>
 		if more_candle_info.is_bearish
 			id.candle_pattern_result.type_spinning_top := TYPE_BEARISH_SPINNING_TOP
 
+// process_kicker_signal(CandlePattern id) =>
+//     for _ = 0 to 0
+//         if array.size(id.more_candle_info) < 2
+// 			break
+// 		more_candle_info = array.first(id.more_candle_info)
+//         prev_more_candle_info = array.get(id.more_candle_info, 1)
+//         prev_atr = array.get(id.atr, 1)
+//         if prev_more_candle_info.is_bearish
+//             if not more_candle_info.is_bullish
+//                 break
+//             if prev_more_candle_info.spread < prev_atr * 1.1
+//                 break
+//             if prev_more_candle_info.shadow_low / prev_more_candle_info.spread > 0.25
+//                 break
+//             id.candle_pattern_result.type_kicker := TYPE_BULLISH_KICKER
+
 process_engulfing_signal(CandlePattern id) =>
 	for _ = 0 to 0
 		if array.size(id.more_candle_info) < 2
@@ -140,6 +172,22 @@ process_engulfing_signal(CandlePattern id) =>
 			break
 		if more_candle_info.is_bearish and prev_more_candle_info.is_bullish and more_candle_info.body_low < prev_more_candle_info.body_low and more_candle_info.body_high > prev_more_candle_info.body_high
 			id.candle_pattern_result.type_engulfing := TYPE_BEARISH_ENGULFING
+
+process_harami_signal(CandlePattern id) =>
+	for _ = 0 to 0
+		if array.size(id.more_candle_info) < 2
+			break
+		more_candle_info = array.first(id.more_candle_info)
+        prev_more_candle_info = array.get(id.more_candle_info, 1)
+        if low < prev_more_candle_info.body_low
+            break
+        if high > prev_more_candle_info.body_high
+            break
+        if more_candle_info.is_bullish and prev_more_candle_info.is_bearish
+            id.candle_pattern_result.type_harami := TYPE_BULLISH_HARAMI
+            break
+        if more_candle_info.is_bearish and prev_more_candle_info.is_bullish
+            id.candle_pattern_result.type_harami := TYPE_BEARISH_HARAMI
 
 add_hammer_signal(CandlePattern id) =>
 	if na(id.candle_pattern_result.type_hammer)
@@ -175,6 +223,14 @@ add_spinning_top_signal(CandlePattern id) =>
 	else if id.candle_pattern_result.type_spinning_top == TYPE_BEARISH_SPINNING_TOP
 		CandleSignals.addCandleSignal(id.candle_signals, NAME_BEARISH_SPINNING_TOP, DESC_BEARISH_SPINNING_TOP, CandleSignals.type_bearish())
 
+// add_kicker_signal(CandlePattern id) =>
+// 	if na(id.candle_pattern_result.type_kicker)
+//         na
+// 	else if id.candle_pattern_result.type_kicker == TYPE_BULLISH_KICKER
+//         CandleSignals.addCandleSignal(id.candle_signals, NAME_BULLISH_KICKER, DESC_BULLISH_KICKER, CandleSignals.type_bullish())
+//     else if id.candle_pattern_result.type_kicker == TYPE_BEARISH_KICKER
+//         CandleSignals.addCandleSignal(id.candle_signals, NAME_BEARISH_KICKER, DESC_BEARISH_KICKER, CandleSignals.type_bearish())
+
 add_engulfing_signal(CandlePattern id) =>
 	if na(id.candle_pattern_result.type_engulfing)
         na
@@ -183,19 +239,31 @@ add_engulfing_signal(CandlePattern id) =>
     else if id.candle_pattern_result.type_engulfing == TYPE_BEARISH_ENGULFING
         CandleSignals.addCandleSignal(id.candle_signals, NAME_BEARISH_ENGULFING, DESC_BEARISH_ENGULFING, CandleSignals.type_bearish())
 
+add_harami_signal(CandlePattern id) =>
+	if na(id.candle_pattern_result.type_harami)
+        na
+	else if id.candle_pattern_result.type_harami == TYPE_BULLISH_HARAMI
+        CandleSignals.addCandleSignal(id.candle_signals, NAME_BULLISH_HARAMI, DESC_BULLISH_HARAMI, CandleSignals.type_bullish())
+    else if id.candle_pattern_result.type_harami == TYPE_BEARISH_HARAMI
+        CandleSignals.addCandleSignal(id.candle_signals, NAME_BEARISH_HARAMI, DESC_BEARISH_HARAMI, CandleSignals.type_bearish())
+
 process_candle_patterns(CandlePattern id) =>
 	process_hammer(id)
 	process_inverted_hammer(id)
 	process_doji_signal(id)
 	process_spinning_top_signal(id)
+    // process_kicker_signal(id)
 	process_engulfing_signal(id)
+    process_harami_signal(id)
 
 add_candle_signals(CandlePattern id) =>
 	add_hammer_signal(id)
 	add_inverted_hammer_signal(id)
 	add_doji_signal(id)
 	add_spinning_top_signal(id)
+    // add_kicker_signal(id)
 	add_engulfing_signal(id)
+    add_harami_signal(id)
 
 export init(CandleSignals.CandleSignals candle_signals, array<MoreCandleInfo.MoreCandleInfo> more_candle_info) =>
 	candle_pattern = CandlePattern.new(candle_signals=candle_signals,
