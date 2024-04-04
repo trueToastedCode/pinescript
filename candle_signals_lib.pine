@@ -3,35 +3,48 @@
 
 //@version=5
 
-library("CandleSignals", overlay=true)
+library("CandleSignalsLib", overlay=true)
 
-TYPE_NEUTRAL = 0
-TYPE_BEARISH = 1
-TYPE_BULLISH = 2
+TYPE_NEUTRAL                           = 0
+TYPE_BEARISH                           = 1
+TYPE_BULLISH                           = 2
 
-export type_neutral() => TYPE_NEUTRAL
-export type_bearish() => TYPE_BEARISH
-export type_bullish() => TYPE_BULLISH
+MODE_DELETE_EQUAL                      = 0
+MODE_DELETE_EQUAL_OR_GREATER           = 1
+
+export type_neutral()                 => TYPE_NEUTRAL
+export type_bearish()                 => TYPE_BEARISH
+export type_bullish()                 => TYPE_BULLISH
+
+export mode_delete_equal()            => MODE_DELETE_EQUAL
+export mode_delete_equal_or_greater() => MODE_DELETE_EQUAL_OR_GREATER
 
 export type CandleSignal
 	string name
 	string description
 	int    signal_type
+	int    delete_bar_index
+	int    delete_mode
 
-export type CandleSignals
+export type CandleSignalsLib
 	array<CandleSignal> candle_signals
 	label               label_neutral
 	label               label_bearish
 	label               label_bullish
+	bool                need_rendering
 
 validateSignalType(int signal_type) =>
 	if signal_type < 0 or signal_type > 2
 		runtime.error(str.format("Unexpected signal type: {0}", signal_type))
 
-isAnyCandleSignal(CandleSignals id) =>
+validateDeleteMode(int delete_mode) =>
+	if delete_mode < 0 or delete_mode > 1
+		runtime.error(str.format("Unexpected delete mode: {0}", delete_mode))
+
+isAnyCandleSignal(CandleSignalsLib id) =>
 	na(id.candle_signals) ? false : array.size(id.candle_signals) != 0
 
-prePlot(CandleSignals id) =>
+prePlot(CandleSignalsLib id) =>
 	nNeutral = 0
 	nBearish = 0
 	nBullish = 0
@@ -60,7 +73,7 @@ prePlot(CandleSignals id) =>
 		bullishDescription := str.trim("[ Bullish ]\n" + bullishDescription)
 	[nNeutral, neutralDescription, nBearish, bearishDescription, nBullish, bullishDescription]
 
-plot_neutral(CandleSignals id, int nNeutral, string description) =>
+plot_neutral(CandleSignalsLib id, int nNeutral, string description) =>
 	if na(id.label_neutral)
 	    id.label_neutral := label.new(x=bar_index,
                                       y=na,
@@ -75,7 +88,7 @@ plot_neutral(CandleSignals id, int nNeutral, string description) =>
 		label.set_tooltip(id.label_neutral, description)
 	id.label_neutral
 
-plot_bearish(CandleSignals id, int nBearish, string description) =>
+plot_bearish(CandleSignalsLib id, int nBearish, string description) =>
 	if na(id.label_bearish)
 	    id.label_bearish := label.new(x=bar_index,
 		                              y=na,
@@ -90,7 +103,7 @@ plot_bearish(CandleSignals id, int nBearish, string description) =>
 		label.set_tooltip(id.label_bearish, description)
 	id.label_bearish
 
-plot_bullish(CandleSignals id, int nBullish, string description, bool isNeedSpace) =>
+plot_bullish(CandleSignalsLib id, int nBullish, string description, bool isNeedSpace) =>
 	if na(id.label_bullish)
 	    id.label_bullish := label.new(x=bar_index,
                                       y=na,
@@ -106,35 +119,74 @@ plot_bullish(CandleSignals id, int nBullish, string description, bool isNeedSpac
 	id.label_bullish
 
 export init() =>
-	CandleSignals.new(na, na, na, na)
+	CandleSignalsLib.new(need_rendering=false)
 
-export addCandleSignal(CandleSignals id, string name, string description, int signal_type) =>
+export add_candle_signal(CandleSignalsLib id, string name, string description, int signal_type) =>
 	validateSignalType(signal_type)
-	signal = CandleSignal.new(name, description, signal_type)
+	signal = CandleSignal.new(name=name,
+                              description=description,
+                              signal_type=signal_type)
 	if na(id.candle_signals)
 		id.candle_signals := array.from<CandleSignal>(signal)
 	else
 		array.push(id.candle_signals, signal)
+	id.need_rendering := true
 	signal
 
-export removeCandleSignal(CandleSignals id, string name) =>
+export add_candle_signal(CandleSignalsLib id, string name, string description, int signal_type, int delete_bar_index, int delete_mode) =>
+	validateSignalType(signal_type)
+	validateDeleteMode(delete_mode)
+	signal = CandleSignal.new(name=name,
+                              description=description,
+                              signal_type=signal_type,
+							  delete_bar_index=delete_bar_index,
+                              delete_mode=delete_mode)
+	if na(id.candle_signals)
+		id.candle_signals := array.from<CandleSignal>(signal)
+	else
+		array.push(id.candle_signals, signal)
+	id.need_rendering := true
+	signal
+
+export remove_candle_signal(CandleSignalsLib id, string name) =>
 	result = false
 	if isAnyCandleSignal(id)
-	    for i = 0 to array.size(id.candle_signals) - 1
+	    for i = array.size(id.candle_signals) - 1 to 0
 	    	if array.get(id.candle_signals, i).name != name
 	    		continue
+			id.need_rendering := true
 	    	array.remove(id.candle_signals, i)
 	    	result := true
 	result
 
-export plot_candle_signals(CandleSignals id) =>
+export plot_candle_signals(CandleSignalsLib id) =>
+	id.need_rendering := false
 	[nNeutral, neutralDescription, nBearish, bearishDescription, nBullish, bullishDescription] = prePlot(id)
 	plot_neutral(id, nNeutral, nBullish == 0 ? neutralDescription : na)
 	plot_bearish(id, nBearish, bearishDescription)
 	plot_bullish(id, nBullish, nNeutral == 0 ? bullishDescription : str.format("{0}\n\n{1}", neutralDescription, bullishDescription), nNeutral != 0)
 
-export arrayify(series CandleSignals id, int n_back) =>
-	result = array.new<CandleSignals>(n_back + 1)
+export clean(CandleSignalsLib id) =>
+	if isAnyCandleSignal(id)
+		for i = array.size(id.candle_signals) - 1 to 0
+			signal = array.get(id.candle_signals, i)
+			if na(signal.delete_bar_index)
+				continue
+			if signal.delete_mode == MODE_DELETE_EQUAL
+				if bar_index == signal.delete_bar_index
+					array.remove(id.candle_signals, i)
+					id.need_rendering := true
+				continue
+			else if signal.delete_mode == MODE_DELETE_EQUAL_OR_GREATER
+				if bar_index >= signal.delete_bar_index
+					array.remove(id.candle_signals, i)
+					id.need_rendering := true
+				continue
+			else
+				runtime.error(str.format("Unexpected delete_mode: {0}", signal.delete_mode))	
+
+export arrayify(CandleSignalsLib id, int n_back) =>
+	result = array.new<CandleSignalsLib>(n_back + 1)
 	for i = 0 to n_back
 		array.set(result, i, id[i])
 	result
