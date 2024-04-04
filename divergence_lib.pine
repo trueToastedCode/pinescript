@@ -3,7 +3,7 @@
 
 //@version=5
 
-indicator("DivergenceLib", overlay=true, max_lines_count=500)
+library("DivergenceLib", overlay=true)
 
 import iFlyTheMoon/CandleSignals/1
 import iFlyTheMoon/ArrayLib/1
@@ -13,7 +13,22 @@ TYPE_HIDDEN_BULLISH_DIVERGENCE = 1
 TYPE_BEARISH_DIVERGENCE        = 2
 TYPE_HIDDEN_BEARISH_DIVERGENCE = 3
 
-type Divergence
+NAME_BULLISH_DIVERGENCE        = "Bullish Divergence"
+NAME_HIDDEN_BULLISH_DIVERGENCE = "Hidden Bullish Divergence"
+NAME_BEARISH_DIVERGENCE        = "Bearish Divergence"
+NAME_HIDDEN_BEARISH_DIVERGENCE = "Hidden Bearish Divergence"
+
+DESC_BULLISH_DIVERGENCE        = ""
+DESC_HIDDEN_BULLISH_DIVERGENCE = ""
+DESC_BEARISH_DIVERGENCE        = ""
+DESC_HIDDEN_BEARISH_DIVERGENCE = ""
+
+export type_bullish_divergence() => TYPE_BULLISH_DIVERGENCE
+export type_hidden_bullish_divergence() => TYPE_HIDDEN_BULLISH_DIVERGENCE
+export type_bearish_divergence() => TYPE_BEARISH_DIVERGENCE
+export type_hidden_bearish_divergence() => TYPE_HIDDEN_BEARISH_DIVERGENCE
+
+export type Divergence
 	int   n_back
 	float price
 	float indicator
@@ -23,10 +38,10 @@ type Divergence
 	bool  is_confirmed
 	int   divergence_type
 
-type DivergenceArrWrap
+export type DivergenceArrWrap
 	array<Divergence> divergences
 
-type DivergenceLibParams
+export type DivergenceLibParams
 	int n_left_start
 	int n_left_step
 	int n_left_end
@@ -36,7 +51,7 @@ type DivergenceLibParams
 
 	int max_in_between
 
-type DivergenceLib
+export type DivergenceLib
 	DivergenceLibParams params
 	array<float>        price_low
 	array<float>        price_high
@@ -276,10 +291,43 @@ get_divergences(DivergenceLib id) =>
 	
 	result
 
-init(DivergenceLibParams params, array<float> price_low, array<float> price_high, array<float> indicator) =>
+export init(DivergenceLibParams params, array<float> price_low, array<float> price_high, array<float> indicator) =>
 	divergence_lib = DivergenceLib.new(params=params,
 		                               price_low=price_low,
                                        price_high=price_high,
 			                           indicator=indicator)
 	get_divergences(divergence_lib)
+
+export add_signals(CandleSignals.CandleSignals id, array<DivergenceArrWrap> divergences) =>
+	for _ = 0 to 0
+		if array.size(divergences) == 0
+			break
+
+		for i = 0 to array.size(divergences) - 1
+			divergences_iter = array.get(divergences, i).divergences
+
+			if array.size(divergences_iter) == 0
+				break
+			
+			for j = 0 to array.size(divergences_iter) - 1
+				divergence = array.get(divergences_iter, j)
+
+				if not (barstate.islast or divergence.is_confirmed)
+					continue
+
+				if divergence.divergence_type == TYPE_BULLISH_DIVERGENCE
+					CandleSignals.addCandleSignal(id, (divergence.is_confirmed ? "" : "Unconfirmed") + NAME_BULLISH_DIVERGENCE, DESC_BULLISH_DIVERGENCE, CandleSignals.type_bullish())
+					break
+
+				if divergence.divergence_type == TYPE_HIDDEN_BULLISH_DIVERGENCE
+					CandleSignals.addCandleSignal(id, (divergence.is_confirmed ? "" : "Unconfirmed") + NAME_HIDDEN_BULLISH_DIVERGENCE, DESC_HIDDEN_BULLISH_DIVERGENCE, CandleSignals.type_bullish())
+					break
+
+				if divergence.divergence_type == TYPE_BEARISH_DIVERGENCE
+					CandleSignals.addCandleSignal(id, (divergence.is_confirmed ? "" : "Unconfirmed") + NAME_BEARISH_DIVERGENCE, DESC_BEARISH_DIVERGENCE, CandleSignals.type_bearish())
+					break
+
+				if divergence.divergence_type == TYPE_HIDDEN_BEARISH_DIVERGENCE
+					CandleSignals.addCandleSignal(id, (divergence.is_confirmed ? "" : "Unconfirmed") + NAME_HIDDEN_BEARISH_DIVERGENCE, DESC_HIDDEN_BEARISH_DIVERGENCE, CandleSignals.type_bearish())
+					break
 
