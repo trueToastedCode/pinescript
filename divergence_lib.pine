@@ -3,7 +3,7 @@
 
 //@version=5
 
-library("DivergenceLib", overlay=true)
+indicator("DivergenceLib", overlay=true, max_lines_count=500)
 
 import iFlyTheMoon/CandleSignals/1
 import iFlyTheMoon/ArrayLib/1
@@ -13,7 +13,7 @@ TYPE_HIDDEN_BULLISH_DIVERGENCE = 1
 TYPE_BEARISH_DIVERGENCE        = 2
 TYPE_HIDDEN_BEARISH_DIVERGENCE = 3
 
-export type Divergence
+type Divergence
 	int   n_back
 	float price
 	float indicator
@@ -23,10 +23,10 @@ export type Divergence
 	bool  is_confirmed
 	int   divergence_type
 
-export type DivergenceArrWrap
+type DivergenceArrWrap
 	array<Divergence> divergences
 
-export type DivergenceLibParams
+type DivergenceLibParams
 	int n_left_start
 	int n_left_step
 	int n_left_end
@@ -36,7 +36,7 @@ export type DivergenceLibParams
 
 	int max_in_between
 
-export type DivergenceLib
+type DivergenceLib
 	DivergenceLibParams params
 	array<float>        price_low
 	array<float>        price_high
@@ -62,7 +62,58 @@ is_bullish_divergence(DivergenceLib id, int n_back_prev, int n_back) =>
 	
 	result
 
-get_bullish_divergence(DivergenceLib id, pivots_low, bool wouldBeConfirmed) =>
+is_hidden_bullish_divergence(DivergenceLib id, int n_back_prev, int n_back) =>
+	if n_back >= n_back_prev
+		runtime.error("Previous n_back compared to n_back must be in the past.")
+
+	result = false
+
+	for _ = 0 to 0
+		if array.get(id.price_low, n_back) <= array.get(id.price_low, n_back_prev)
+			break
+
+		if array.get(id.indicator, n_back) >= array.get(id.indicator, n_back_prev)
+			break
+		
+		result := true
+	
+	result
+
+is_bearish_divergence(DivergenceLib id, int n_back_prev, int n_back) =>
+	if n_back >= n_back_prev
+		runtime.error("Previous n_back compared to n_back must be in the past.")
+
+	result = false
+
+	for _ = 0 to 0
+		if array.get(id.price_high, n_back) <= array.get(id.price_high, n_back_prev)
+			break
+
+		if array.get(id.indicator, n_back) >= array.get(id.indicator, n_back_prev)
+			break
+		
+		result := true
+	
+	result
+
+is_hidden_bearish_divergence(DivergenceLib id, int n_back_prev, int n_back) =>
+	if n_back >= n_back_prev
+		runtime.error("Previous n_back compared to n_back must be in the past.")
+
+	result = false
+
+	for _ = 0 to 0
+		if array.get(id.price_high, n_back) >= array.get(id.price_high, n_back_prev)
+			break
+
+		if array.get(id.indicator, n_back) <= array.get(id.indicator, n_back_prev)
+			break
+		
+		result := true
+	
+	result
+
+get_bullish_divergence(DivergenceLib id, pivots_low, bool would_be_confirmed) =>
 	Divergence result = na
 	
 	for _ = 0 to 0
@@ -80,8 +131,80 @@ get_bullish_divergence(DivergenceLib id, pivots_low, bool wouldBeConfirmed) =>
 				                         n_back_prev=n_back_prev,
 										 price_prev=array.get(id.price_low, n_back_prev),
 										 indicator_prev=array.get(id.indicator, n_back_prev),
-										 is_confirmed=wouldBeConfirmed,
+										 is_confirmed=would_be_confirmed,
 										 divergence_type=TYPE_BULLISH_DIVERGENCE)
+				break
+	
+	result
+
+get_hidden_bullish_divergence(DivergenceLib id, pivots_low, bool would_be_confirmed) =>
+	Divergence result = na
+	
+	for _ = 0 to 0
+		if array.size(pivots_low) < 2
+			break
+
+		for i = 1 to array.size(pivots_low) - 1
+		    n_back = array.get(pivots_low, 0)
+		    n_back_prev = array.get(pivots_low, i)
+
+		    if is_hidden_bullish_divergence(id, n_back_prev, n_back)
+		        result := Divergence.new(n_back=n_back,
+				                         price=array.get(id.price_low, n_back),
+										 indicator=array.get(id.indicator, n_back),
+				                         n_back_prev=n_back_prev,
+										 price_prev=array.get(id.price_low, n_back_prev),
+										 indicator_prev=array.get(id.indicator, n_back_prev),
+										 is_confirmed=would_be_confirmed,
+										 divergence_type=TYPE_HIDDEN_BULLISH_DIVERGENCE)
+				break
+	
+	result
+
+get_bearish_divergence(DivergenceLib id, pivots_high, bool would_be_confirmed) =>
+	Divergence result = na
+	
+	for _ = 0 to 0
+		if array.size(pivots_high) < 2
+			break
+
+		for i = 1 to array.size(pivots_high) - 1
+		    n_back = array.get(pivots_high, 0)
+		    n_back_prev = array.get(pivots_high, i)
+
+		    if is_bearish_divergence(id, n_back_prev, n_back)
+		        result := Divergence.new(n_back=n_back,
+				                         price=array.get(id.price_high, n_back),
+										 indicator=array.get(id.indicator, n_back),
+				                         n_back_prev=n_back_prev,
+										 price_prev=array.get(id.price_high, n_back_prev),
+										 indicator_prev=array.get(id.indicator, n_back_prev),
+										 is_confirmed=would_be_confirmed,
+										 divergence_type=TYPE_BEARISH_DIVERGENCE)
+				break
+	
+	result
+
+get_hidden_bearish_divergence(DivergenceLib id, pivots_high, bool would_be_confirmed) =>
+	Divergence result = na
+	
+	for _ = 0 to 0
+		if array.size(pivots_high) < 2
+			break
+
+		for i = 1 to array.size(pivots_high) - 1
+		    n_back = array.get(pivots_high, 0)
+		    n_back_prev = array.get(pivots_high, i)
+
+		    if is_hidden_bearish_divergence(id, n_back_prev, n_back)
+		        result := Divergence.new(n_back=n_back,
+				                         price=array.get(id.price_high, n_back),
+										 indicator=array.get(id.indicator, n_back),
+				                         n_back_prev=n_back_prev,
+										 price_prev=array.get(id.price_high, n_back_prev),
+										 indicator_prev=array.get(id.indicator, n_back_prev),
+										 is_confirmed=would_be_confirmed,
+										 divergence_type=TYPE_HIDDEN_BEARISH_DIVERGENCE)
 				break
 	
 	result
@@ -99,20 +222,45 @@ get_divergences_for_iteration(DivergenceLib id, int n_left, int n_right) =>
 			break
 		
 		pivots_low = ArrayLib.find_pivots_low_n_back(id.price_low, n_left, n_right, get_pivots_max_count(id))
+		would_be_confirmed = min_n_back == n_right
 
-		if min_n_back == n_right
-			bullish_divergence = get_bullish_divergence(id, pivots_low, true)
-		
-			if not na(bullish_divergence)
-				array.push(result, bullish_divergence)
-
-		else
+		if not would_be_confirmed
 			array.insert(pivots_low, 0, min_n_back)
 
-			unconfirmed_bullish_divergence = get_bullish_divergence(id, pivots_low, false)
+		bullish_divergence = get_bullish_divergence(id, pivots_low, would_be_confirmed)
+	
+		if not na(bullish_divergence)
+			array.push(result, bullish_divergence)
 
-			if not na(unconfirmed_bullish_divergence)
-				array.push(result, unconfirmed_bullish_divergence)
+		hidden_bullish_divergence = get_hidden_bullish_divergence(id, pivots_low, would_be_confirmed)
+
+		if not na(hidden_bullish_divergence)
+			array.push(result, hidden_bullish_divergence)
+
+	for _ = 0 to 0
+		if array.size(id.price_high) <= n_left + n_right
+			break
+
+		max_n_back = ArrayLib.find_max_n_back(id.price_high, n_right, n_left, n_right)
+
+		if max_n_back > n_right
+			break
+		
+		pivots_high = ArrayLib.find_pivots_high_n_back(id.price_high, n_left, n_right, get_pivots_max_count(id))
+		would_be_confirmed = max_n_back == n_right
+
+		if not would_be_confirmed
+			array.insert(pivots_high, 0, max_n_back)
+
+		bearish_divergence = get_bearish_divergence(id, pivots_high, would_be_confirmed)
+
+		if not na(bearish_divergence)
+			array.push(result, bearish_divergence)
+
+		hidden_bearish_divergence = get_hidden_bearish_divergence(id, pivots_high, would_be_confirmed)
+
+		if not na(hidden_bearish_divergence)
+			array.push(result, hidden_bearish_divergence)
 
 	DivergenceArrWrap.new(result)
 
@@ -128,7 +276,7 @@ get_divergences(DivergenceLib id) =>
 	
 	result
 
-export init(DivergenceLibParams params, array<float> price_low, array<float> price_high, array<float> indicator) =>
+init(DivergenceLibParams params, array<float> price_low, array<float> price_high, array<float> indicator) =>
 	divergence_lib = DivergenceLib.new(params=params,
 		                               price_low=price_low,
                                        price_high=price_high,
