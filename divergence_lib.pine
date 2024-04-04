@@ -299,35 +299,44 @@ export init(DivergenceLibParams params, array<float> price_low, array<float> pri
 	get_divergences(divergence_lib)
 
 export add_signals(CandleSignals.CandleSignals id, array<DivergenceArrWrap> divergences) =>
-	for _ = 0 to 0
-		if array.size(divergences) == 0
-			break
+	n_back_updates = array.new<int>(0)
 
+	if array.size(divergences) != 0
 		for i = 0 to array.size(divergences) - 1
 			divergences_iter = array.get(divergences, i).divergences
 
 			if array.size(divergences_iter) == 0
-				break
+				continue
 			
 			for j = 0 to array.size(divergences_iter) - 1
 				divergence = array.get(divergences_iter, j)
 
-				if not (barstate.islast or divergence.is_confirmed)
+				if not (barstate.islastconfirmedhistory or divergence.is_confirmed)
 					continue
 
 				if divergence.divergence_type == TYPE_BULLISH_DIVERGENCE
-					CandleSignals.addCandleSignal(id, (divergence.is_confirmed ? "" : "Unconfirmed") + NAME_BULLISH_DIVERGENCE, DESC_BULLISH_DIVERGENCE, CandleSignals.type_bullish())
-					break
+					CandleSignals.addCandleSignal(id[divergence.n_back], (divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_BULLISH_DIVERGENCE, DESC_BULLISH_DIVERGENCE, CandleSignals.type_bullish())
+					if not array.includes(n_back_updates, divergence.n_back)
+						array.push(n_back_updates, divergence.n_back)
+					continue
 
 				if divergence.divergence_type == TYPE_HIDDEN_BULLISH_DIVERGENCE
-					CandleSignals.addCandleSignal(id, (divergence.is_confirmed ? "" : "Unconfirmed") + NAME_HIDDEN_BULLISH_DIVERGENCE, DESC_HIDDEN_BULLISH_DIVERGENCE, CandleSignals.type_bullish())
-					break
+					CandleSignals.addCandleSignal(id[divergence.n_back], (divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_HIDDEN_BULLISH_DIVERGENCE, DESC_HIDDEN_BULLISH_DIVERGENCE, CandleSignals.type_bullish())
+					if not array.includes(n_back_updates, divergence.n_back)
+						array.push(n_back_updates, divergence.n_back)
+					continue
 
 				if divergence.divergence_type == TYPE_BEARISH_DIVERGENCE
-					CandleSignals.addCandleSignal(id, (divergence.is_confirmed ? "" : "Unconfirmed") + NAME_BEARISH_DIVERGENCE, DESC_BEARISH_DIVERGENCE, CandleSignals.type_bearish())
-					break
+					CandleSignals.addCandleSignal(id[divergence.n_back], (divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_BEARISH_DIVERGENCE, DESC_BEARISH_DIVERGENCE, CandleSignals.type_bearish())
+					if not array.includes(n_back_updates, divergence.n_back)
+						array.push(n_back_updates, divergence.n_back)
+					continue
 
 				if divergence.divergence_type == TYPE_HIDDEN_BEARISH_DIVERGENCE
-					CandleSignals.addCandleSignal(id, (divergence.is_confirmed ? "" : "Unconfirmed") + NAME_HIDDEN_BEARISH_DIVERGENCE, DESC_HIDDEN_BEARISH_DIVERGENCE, CandleSignals.type_bearish())
-					break
+					CandleSignals.addCandleSignal(id[divergence.n_back], (divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_HIDDEN_BEARISH_DIVERGENCE, DESC_HIDDEN_BEARISH_DIVERGENCE, CandleSignals.type_bearish())
+					if not array.includes(n_back_updates, divergence.n_back)
+						array.push(n_back_updates, divergence.n_back)
+					continue
+	
+	n_back_updates
 
