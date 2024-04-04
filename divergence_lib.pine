@@ -1,0 +1,137 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © iFlyTheMoon
+
+//@version=5
+
+library("DivergenceLib", overlay=true)
+
+import iFlyTheMoon/CandleSignals/1
+import iFlyTheMoon/ArrayLib/1
+
+TYPE_BULLISH_DIVERGENCE        = 0
+TYPE_HIDDEN_BULLISH_DIVERGENCE = 1
+TYPE_BEARISH_DIVERGENCE        = 2
+TYPE_HIDDEN_BEARISH_DIVERGENCE = 3
+
+export type Divergence
+	int   n_back
+	float price
+	float indicator
+	int   n_back_prev
+	float price_prev
+	float indicator_prev
+	bool  is_confirmed
+	int   divergence_type
+
+export type DivergenceArrWrap
+	array<Divergence> divergences
+
+export type DivergenceLibParams
+	int n_left_start
+	int n_left_step
+	int n_left_end
+
+	int n_right_start
+	int n_right_step
+
+	int max_in_between
+
+export type DivergenceLib
+	DivergenceLibParams params
+	array<float>        price_low
+	array<float>        price_high
+	array<float>        indicator
+
+get_pivots_max_count(DivergenceLib id) =>
+	id.params.max_in_between > 0 ? 2 + id.params.max_in_between : 2
+
+is_bullish_divergence(DivergenceLib id, int n_back_prev, int n_back) =>
+	if n_back >= n_back_prev
+		runtime.error("Previous n_back compared to n_back must be in the past.")
+
+	result = false
+
+	for _ = 0 to 0
+		if array.get(id.price_low, n_back) >= array.get(id.price_low, n_back_prev)
+			break
+
+		if array.get(id.indicator, n_back) <= array.get(id.indicator, n_back_prev)
+			break
+		
+		result := true
+	
+	result
+
+get_bullish_divergence(DivergenceLib id, pivots_low, bool wouldBeConfirmed) =>
+	Divergence result = na
+	
+	for _ = 0 to 0
+		if array.size(pivots_low) < 2
+			break
+
+		for i = 1 to array.size(pivots_low) - 1
+		    n_back = array.get(pivots_low, 0)
+		    n_back_prev = array.get(pivots_low, i)
+
+		    if is_bullish_divergence(id, n_back_prev, n_back)
+		        result := Divergence.new(n_back=n_back,
+				                         price=array.get(id.price_low, n_back),
+										 indicator=array.get(id.indicator, n_back),
+				                         n_back_prev=n_back_prev,
+										 price_prev=array.get(id.price_low, n_back_prev),
+										 indicator_prev=array.get(id.indicator, n_back_prev),
+										 is_confirmed=wouldBeConfirmed,
+										 divergence_type=TYPE_BULLISH_DIVERGENCE)
+				break
+	
+	result
+
+get_divergences_for_iteration(DivergenceLib id, int n_left, int n_right) =>
+	result = array.new<Divergence>(0)
+
+	for _ = 0 to 0
+		if array.size(id.price_low) <= n_left + n_right
+			break
+		
+		min_n_back = ArrayLib.find_min_n_back(id.price_low, n_right, n_left, n_right)
+
+		if min_n_back > n_right
+			break
+		
+		pivots_low = ArrayLib.find_pivots_low_n_back(id.price_low, n_left, n_right, get_pivots_max_count(id))
+
+		if min_n_back == n_right
+			bullish_divergence = get_bullish_divergence(id, pivots_low, true)
+		
+			if not na(bullish_divergence)
+				array.push(result, bullish_divergence)
+
+		else
+			array.insert(pivots_low, 0, min_n_back)
+
+			unconfirmed_bullish_divergence = get_bullish_divergence(id, pivots_low, false)
+
+			if not na(unconfirmed_bullish_divergence)
+				array.push(result, unconfirmed_bullish_divergence)
+
+	DivergenceArrWrap.new(result)
+
+get_divergences(DivergenceLib id) =>
+	loop_end = (id.params.n_left_end - id.params.n_left_start) / id.params.n_left_step
+	result = array.new<DivergenceArrWrap>(loop_end + 1)
+
+	for i = 0 to loop_end
+        result_iteration = get_divergences_for_iteration(id=id,
+		                                                 n_left=id.params.n_left_start + id.params.n_left_step * i,
+			      	    			                     n_right=id.params.n_right_start + id.params.n_right_step * i)
+	    array.set(result, i, result_iteration)
+	
+	result
+
+export init(DivergenceLibParams params, array<float> price_low, array<float> price_high, array<float> indicator) =>
+	divergence_lib = DivergenceLib.new(params=params,
+		                               price_low=price_low,
+                                       price_high=price_high,
+			                           indicator=indicator)
+	get_divergences(divergence_lib)
+
