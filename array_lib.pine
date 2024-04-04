@@ -1,0 +1,155 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © iFlyTheMoon
+
+//@version=5
+
+library("ArrayLib", overlay=true)
+
+// types = [
+//     'int',
+//     'float',
+//     'bool',
+//     'color',
+//     'string',
+//     'label',
+//     'line',
+//     'linefill',
+//     'box',
+//     'table'
+// ]
+
+// def get_method(type):
+//     return f'''
+// export arrayify(series {types} src, int n_back) =>
+//     result = array.new<{types}>(n_back + 1)
+//     for i = 0 to n_back
+//         array.set(result, i, src[i])
+//     result
+// '''.strip()
+
+// print('\n\n'.join(map(get_method, types)))
+
+export arrayify(series int src, int n_back) =>
+    result = array.new<int>(n_back + 1)
+    for i = 0 to n_back
+        array.set(result, i, src[i])
+    result
+
+export arrayify(series float src, int n_back) =>
+    result = array.new<float>(n_back + 1)
+    for i = 0 to n_back
+        array.set(result, i, src[i])
+    result
+
+export arrayify(series bool src, int n_back) =>
+    result = array.new<bool>(n_back + 1)
+    for i = 0 to n_back
+        array.set(result, i, src[i])
+    result
+
+export arrayify(series color src, int n_back) =>
+    result = array.new<color>(n_back + 1)
+    for i = 0 to n_back
+        array.set(result, i, src[i])
+    result
+
+export arrayify(series string src, int n_back) =>
+    result = array.new<string>(n_back + 1)
+    for i = 0 to n_back
+        array.set(result, i, src[i])
+    result
+
+export arrayify(series label src, int n_back) =>
+    result = array.new<label>(n_back + 1)
+    for i = 0 to n_back
+        array.set(result, i, src[i])
+    result
+
+export arrayify(series line src, int n_back) =>
+    result = array.new<line>(n_back + 1)
+    for i = 0 to n_back
+        array.set(result, i, src[i])
+    result
+
+export arrayify(series linefill src, int n_back) =>
+    result = array.new<linefill>(n_back + 1)
+    for i = 0 to n_back
+        array.set(result, i, src[i])
+    result
+
+export arrayify(series box src, int n_back) =>
+    result = array.new<box>(n_back + 1)
+    for i = 0 to n_back
+        array.set(result, i, src[i])
+    result
+
+export arrayify(series table src, int n_back) =>
+    result = array.new<table>(n_back + 1)
+    for i = 0 to n_back
+        array.set(result, i, src[i])
+    result
+
+export find_min_n_back(array<float> values, int n_back, int n_left, int n_right) =>
+	if n_back < n_right
+		runtime.error("The test index (n_back) must be greater than or equal to the number of elements to consider to the right (n_right).")
+	
+	if n_back >= array.size(values) - n_left
+		runtime.error("The test index (n_back) exceeds the maximum index allowed considering the number of elements to consider to the left (n_left).")
+	
+	min_n_back = n_back - n_right
+	min_val = array.get(values, min_n_back)
+
+	for curr_n_back = min_n_back + 1 to n_back + n_left
+        curr_val = array.get(values, curr_n_back)
+
+		if curr_val < min_val
+			min_n_back := curr_n_back
+			min_val := curr_val
+	
+    min_n_back
+
+export find_max_n_back(array<float> values, int n_back, int n_left, int n_right) =>
+	if n_back < n_right
+		runtime.error("The test index (n_back) must be greater than or equal to the number of elements to consider to the right (n_right).")
+	
+	if n_back >= array.size(values) - n_left
+		runtime.error("The test index (n_back) exceeds the maximum index allowed considering the number of elements to consider to the left (n_left).")
+	
+	max_n_back = n_back - n_right
+	max_val = array.get(values, max_n_back)
+
+	for curr_n_back = max_n_back + 1 to n_back + n_left
+        curr_val = array.get(values, curr_n_back)
+
+		if curr_val > max_val
+			max_n_back := curr_n_back
+			max_val := curr_val
+	
+    max_n_back
+
+export find_pivots_low_n_back(array<float> values, int n_left, int n_right, int max_count) =>
+	result = array.new<int>(0)
+
+	if array.size(values) > n_left + n_right
+		for n_back = n_right to array.size(values) - n_left - 1
+			if find_min_n_back(values, n_back, n_left, n_right) == n_back
+				array.push(result, n_back)
+
+				if max_count > 0 ? array.size(result) == max_count : false
+					break
+					
+	result
+
+export find_pivots_high_n_back(array<float> values, int n_left, int n_right, int max_count) =>
+	result = array.new<int>(0)
+
+	if array.size(values) > n_left + n_right
+		for n_back = n_right to array.size(values) - n_left - 1
+			if find_max_n_back(values, n_back, n_left, n_right) == n_back
+				array.push(result, n_back)
+
+				if max_count > 0 ? array.size(result) == max_count : false
+					break
+
+	result
+
