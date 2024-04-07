@@ -56,9 +56,9 @@ is_candle_signal(CandleSignalsLib id, string unique) =>
 		if isNoUniqueValue(unique)
 			break
 
-		if na(id.candle_signals) ? true : array.size(id.candle_signals) == 0
+		if na(id.candle_signals) ? true : (array.size(id.candle_signals) == 0)
 			break
-		
+
 		for i = 0 to array.size(id.candle_signals) - 1
 			candle_signal = array.get(id.candle_signals, i)
 
