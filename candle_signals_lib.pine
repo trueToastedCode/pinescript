@@ -1,4 +1,4 @@
-// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+i// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © iFlyTheMoon
 
 //@version=5
@@ -25,6 +25,7 @@ export type CandleSignal
 	int    signal_type
 	int    delete_bar_index
 	int    delete_mode
+	line   signal_line
 
 export type CandleSignalsLib
 	array<CandleSignal> candle_signals
@@ -148,14 +149,20 @@ export add_candle_signal(CandleSignalsLib id, string name, string description, i
 	id.need_rendering := true
 	signal
 
+remove_candle_signal(CandleSignalsLib id, int idx) =>
+	candle_signal = array.get(id.candle_signals, idx)
+	if not na(candle_signal.signal_line)
+		line.delete(candle_signal.signal_line)
+	array.remove(id.candle_signals, idx)
+	id.need_rendering := true
+
 export remove_candle_signal(CandleSignalsLib id, string name) =>
 	result = false
 	if isAnyCandleSignal(id)
 	    for i = array.size(id.candle_signals) - 1 to 0
 	    	if array.get(id.candle_signals, i).name != name
 	    		continue
-			id.need_rendering := true
-	    	array.remove(id.candle_signals, i)
+			remove_candle_signal(id, i)
 	    	result := true
 	result
 
@@ -174,13 +181,11 @@ export clean(CandleSignalsLib id) =>
 				continue
 			if signal.delete_mode == MODE_DELETE_EQUAL
 				if bar_index == signal.delete_bar_index
-					array.remove(id.candle_signals, i)
-					id.need_rendering := true
+					remove_candle_signal(id, i)
 				continue
 			else if signal.delete_mode == MODE_DELETE_EQUAL_OR_GREATER
 				if bar_index >= signal.delete_bar_index
-					array.remove(id.candle_signals, i)
-					id.need_rendering := true
+					remove_candle_signal(id, i)
 				continue
 			else
 				runtime.error(str.format("Unexpected delete_mode: {0}", signal.delete_mode))	
