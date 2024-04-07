@@ -264,6 +264,9 @@ get_divergences_for_iteration(DivergenceLib id, int n_left, int n_right) =>
 		would_be_confirmed = min_n_back == n_right
 
 		if not would_be_confirmed
+			if array.size(pivots_low) == get_pivots_max_count(id)
+				array.pop(pivots_low)
+
 			array.insert(pivots_low, 0, min_n_back)
 
 		bullish_divergence = get_bullish_divergence(id, pivots_low, would_be_confirmed)
@@ -289,6 +292,9 @@ get_divergences_for_iteration(DivergenceLib id, int n_left, int n_right) =>
 		would_be_confirmed = max_n_back == n_right
 
 		if not would_be_confirmed
+			if array.size(pivots_high) == get_pivots_max_count(id)
+				array.pop(pivots_high)
+
 			array.insert(pivots_high, 0, max_n_back)
 
 		bearish_divergence = get_bearish_divergence(id, pivots_high, would_be_confirmed)
