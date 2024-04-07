@@ -20,6 +20,7 @@ export mode_delete_equal()            => MODE_DELETE_EQUAL
 export mode_delete_equal_or_greater() => MODE_DELETE_EQUAL_OR_GREATER
 
 export type CandleSignal
+	string unique // but not intended as id
 	string name
 	string description
 	int    signal_type
@@ -44,6 +45,34 @@ validateDeleteMode(int delete_mode) =>
 
 isAnyCandleSignal(CandleSignalsLib id) =>
 	na(id.candle_signals) ? false : array.size(id.candle_signals) != 0
+
+isNoUniqueValue(string unique) =>
+	na(unique) ? true : (str.length(unique) == 0)
+
+is_candle_signal(CandleSignalsLib id, string unique) =>
+	result = false
+
+	for _ = 0 to 0
+		if isNoUniqueValue(unique)
+			break
+
+		if array.size(id.candle_signals) == 0
+			break
+		
+		for i = 0 to array.size(id.candle_signals) - 1
+			candle_signal = array.get(id.candle_signals, i)
+
+			if isNoUniqueValue(candle_signal.unique)
+				continue
+			
+			if unique != candle_signal.unique
+				continue
+			
+			result := true
+			
+			break
+
+	result
 
 prePlot(CandleSignalsLib id) =>
 	nNeutral = 0
@@ -122,20 +151,23 @@ plot_bullish(CandleSignalsLib id, int nBullish, string description, bool isNeedS
 export init() =>
 	CandleSignalsLib.new(need_rendering=false)
 
-export add_candle_signal(CandleSignalsLib id, string name, string description, int signal_type, line signal_line, int delete_bar_index, int delete_mode) =>
-	validateSignalType(signal_type)
-	validateDeleteMode(delete_mode)
-	signal = CandleSignal.new(name=name,
-                              description=description,
-                              signal_type=signal_type,
-							  signal_line=signal_line,
-							  delete_bar_index=delete_bar_index,
-                              delete_mode=delete_mode)
-	if na(id.candle_signals)
-		id.candle_signals := array.from<CandleSignal>(signal)
-	else
-		array.push(id.candle_signals, signal)
-	id.need_rendering := true
+export add_candle_signal(CandleSignalsLib id, string unique, string name, string description, int signal_type, line signal_line, int delete_bar_index, int delete_mode) =>
+	CandleSignal signal = na
+	if not is_candle_signal(id, unique)
+		validateSignalType(signal_type)
+		validateDeleteMode(delete_mode)
+        signal := CandleSignal.new(unique=unique,
+                                   name=name,
+                                   description=description,
+                                   signal_type=signal_type,
+                                   signal_line=signal_line,
+                                   delete_bar_index=delete_bar_index,
+                                   delete_mode=delete_mode)
+		if na(id.candle_signals)
+			id.candle_signals := array.from<CandleSignal>(signal)
+		else
+			array.push(id.candle_signals, signal)
+		id.need_rendering := true
 	signal
 
 remove_candle_signal(CandleSignalsLib id, int idx) =>
