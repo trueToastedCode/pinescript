@@ -381,14 +381,13 @@ export add_signals(CandleSignalsLib.CandleSignalsLib id, DivergenceLibParams par
 				continue
 
 			if divergence.divergence_type == TYPE_HIDDEN_BEARISH_DIVERGENCE
-				if barstate.islast
-                    CandleSignalsLib.add_candle_signal(id=id[divergence.n_back],
-                                                       name=(divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_HIDDEN_BEARISH_DIVERGENCE,
-                                                       description=DESC_HIDDEN_BEARISH_DIVERGENCE,
-                                                       signal_type=CandleSignalsLib.type_bearish(),
-                                                       signal_line=signal_line,
-                                                       delete_bar_index=delete_bar_index,
-                                                       delete_mode=delete_mode)
+                CandleSignalsLib.add_candle_signal(id=id[divergence.n_back],
+                                                   name=(divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_HIDDEN_BEARISH_DIVERGENCE,
+                                                   description=DESC_HIDDEN_BEARISH_DIVERGENCE,
+                                                   signal_type=CandleSignalsLib.type_bearish(),
+                                                   signal_line=signal_line,
+                                                   delete_bar_index=delete_bar_index,
+                                                   delete_mode=delete_mode)
 				continue
 
 // MAX_N_BACK = 499
