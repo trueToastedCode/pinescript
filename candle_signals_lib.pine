@@ -1,4 +1,4 @@
-i// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © iFlyTheMoon
 
 //@version=5
@@ -35,11 +35,11 @@ export type CandleSignalsLib
 	bool                need_rendering
 
 validateSignalType(int signal_type) =>
-	if signal_type < 0 or signal_type > 2
+	if na(signal_type) ? false : (signal_type < 0 or signal_type > 2)
 		runtime.error(str.format("Unexpected signal type: {0}", signal_type))
 
 validateDeleteMode(int delete_mode) =>
-	if delete_mode < 0 or delete_mode > 1
+	if na(delete_mode) ? false : (delete_mode < 0 or delete_mode > 1)
 		runtime.error(str.format("Unexpected delete mode: {0}", delete_mode))
 
 isAnyCandleSignal(CandleSignalsLib id) =>
@@ -122,24 +122,13 @@ plot_bullish(CandleSignalsLib id, int nBullish, string description, bool isNeedS
 export init() =>
 	CandleSignalsLib.new(need_rendering=false)
 
-export add_candle_signal(CandleSignalsLib id, string name, string description, int signal_type) =>
-	validateSignalType(signal_type)
-	signal = CandleSignal.new(name=name,
-                              description=description,
-                              signal_type=signal_type)
-	if na(id.candle_signals)
-		id.candle_signals := array.from<CandleSignal>(signal)
-	else
-		array.push(id.candle_signals, signal)
-	id.need_rendering := true
-	signal
-
-export add_candle_signal(CandleSignalsLib id, string name, string description, int signal_type, int delete_bar_index, int delete_mode) =>
+export add_candle_signal(CandleSignalsLib id, string name, string description, int signal_type, line signal_line, int delete_bar_index, int delete_mode) =>
 	validateSignalType(signal_type)
 	validateDeleteMode(delete_mode)
 	signal = CandleSignal.new(name=name,
                               description=description,
                               signal_type=signal_type,
+							  signal_line=signal_line,
 							  delete_bar_index=delete_bar_index,
                               delete_mode=delete_mode)
 	if na(id.candle_signals)
