@@ -352,6 +352,7 @@ export add_signals(CandleSignalsLib.CandleSignalsLib id, DivergenceLibParams par
 
 			if divergence.divergence_type == TYPE_BULLISH_DIVERGENCE
                 CandleSignalsLib.add_candle_signal(id=id[divergence.n_back],
+                                                   unique=str.format("{0}{1}", NAME_BULLISH_DIVERGENCE, divergence.n_back_prev - divergence.n_back),
                                                    name=(divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_BULLISH_DIVERGENCE,
                                                    description=DESC_BULLISH_DIVERGENCE,
                                                    signal_type=CandleSignalsLib.type_bullish(),
@@ -362,6 +363,7 @@ export add_signals(CandleSignalsLib.CandleSignalsLib id, DivergenceLibParams par
 
 			if divergence.divergence_type == TYPE_HIDDEN_BULLISH_DIVERGENCE
                 CandleSignalsLib.add_candle_signal(id=id[divergence.n_back],
+                                                   unique=str.format("{0}{1}", NAME_HIDDEN_BULLISH_DIVERGENCE, divergence.n_back_prev - divergence.n_back),
                                                    name=(divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_HIDDEN_BULLISH_DIVERGENCE,
                                                    description=DESC_HIDDEN_BULLISH_DIVERGENCE,
                                                    signal_type=CandleSignalsLib.type_bullish(),
@@ -372,6 +374,7 @@ export add_signals(CandleSignalsLib.CandleSignalsLib id, DivergenceLibParams par
 
 			if divergence.divergence_type == TYPE_BEARISH_DIVERGENCE
                 CandleSignalsLib.add_candle_signal(id=id[divergence.n_back],
+                                                   unique=str.format("{0}{1}", NAME_BEARISH_DIVERGENCE, divergence.n_back_prev - divergence.n_back),
                                                    name=(divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_BEARISH_DIVERGENCE,
                                                    description=DESC_BEARISH_DIVERGENCE,
                                                    signal_type=CandleSignalsLib.type_bearish(),
@@ -382,6 +385,7 @@ export add_signals(CandleSignalsLib.CandleSignalsLib id, DivergenceLibParams par
 
 			if divergence.divergence_type == TYPE_HIDDEN_BEARISH_DIVERGENCE
                 CandleSignalsLib.add_candle_signal(id=id[divergence.n_back],
+                                                   unique=str.format("{0}{1}", NAME_HIDDEN_BEARISH_DIVERGENCE, divergence.n_back_prev - divergence.n_back),
                                                    name=(divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_HIDDEN_BEARISH_DIVERGENCE,
                                                    description=DESC_HIDDEN_BEARISH_DIVERGENCE,
                                                    signal_type=CandleSignalsLib.type_bearish(),
@@ -389,6 +393,8 @@ export add_signals(CandleSignalsLib.CandleSignalsLib id, DivergenceLibParams par
                                                    delete_bar_index=delete_bar_index,
                                                    delete_mode=delete_mode)
 				continue
+			
+			runtime.error(str.format("Unexpected divergence type: {0}", divergence.divergence_type))
 
 // MAX_N_BACK = 499
 
