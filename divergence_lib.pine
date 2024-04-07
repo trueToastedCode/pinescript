@@ -39,14 +39,19 @@ export type Divergence
 	int   divergence_type
 
 export type DivergenceLibParams
-	int n_left_start
-	int n_left_step
-	int n_left_end
+	int   n_left_start
+	int   n_left_step
+	int   n_left_end
+  
+	int   n_right_start
+	int   n_right_step
+  
+	int   max_in_between
+ 
+	bool  add_lines
+	color line_color_bullish
+	color line_color_bearish
 
-	int n_right_start
-	int n_right_step
-
-	int max_in_between
 
 export type DivergenceLib
 	DivergenceLibParams params
@@ -190,6 +195,7 @@ get_hidden_bullish_divergence(DivergenceLib id, pivots_low, bool would_be_confir
 										 indicator_prev=array.get(id.indicator, n_back_prev),
 										 is_confirmed=would_be_confirmed,
 										 divergence_type=TYPE_HIDDEN_BULLISH_DIVERGENCE)
+
 				break
 	
 	result
@@ -325,7 +331,7 @@ export init(DivergenceLibParams params, array<float> price_low, array<float> pri
 			                           indicator=indicator)
 	get_divergences(divergence_lib)
 
-export add_signals(CandleSignalsLib.CandleSignalsLib id, array<Divergence> divergences) =>
+export add_signals(CandleSignalsLib.CandleSignalsLib id, DivergenceLibParams params, array<Divergence> divergences) =>
 	if array.size(divergences) != 0
 		for i = 0 to array.size(divergences) - 1
 			divergence = array.get(divergences, i)
@@ -333,32 +339,56 @@ export add_signals(CandleSignalsLib.CandleSignalsLib id, array<Divergence> diver
 			if not (barstate.islast or divergence.is_confirmed)
 				continue
 
+            signal_line = params.add_lines ? line.new(x1=bar_index - divergence.n_back_prev,
+                                                      y1=divergence.price_prev,
+                                                      x2=bar_index - divergence.n_back,
+                                                      y2=divergence.price,
+                                                      color=(divergence.divergence_type == TYPE_BULLISH_DIVERGENCE or divergence.divergence_type == TYPE_HIDDEN_BULLISH_DIVERGENCE) ? params.line_color_bullish : params.line_color_bearish,
+                                                      style=line.style_solid) : na
+
+			delete_bar_index = barstate.islast ? bar_index : na
+
+			delete_mode = barstate.islast ? (divergence.is_confirmed ? CandleSignalsLib.mode_delete_equal() : CandleSignalsLib.mode_delete_equal_or_greater()) : na
+
 			if divergence.divergence_type == TYPE_BULLISH_DIVERGENCE
-				if barstate.islast
-					CandleSignalsLib.add_candle_signal(id[divergence.n_back], (divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_BULLISH_DIVERGENCE, DESC_BULLISH_DIVERGENCE, CandleSignalsLib.type_bullish(), bar_index, divergence.is_confirmed ? CandleSignalsLib.mode_delete_equal() : CandleSignalsLib.mode_delete_equal_or_greater())
-				else
-					CandleSignalsLib.add_candle_signal(id[divergence.n_back], NAME_BULLISH_DIVERGENCE, DESC_BULLISH_DIVERGENCE, CandleSignalsLib.type_bullish())
+                CandleSignalsLib.add_candle_signal(id=id[divergence.n_back],
+                                                   name=(divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_BULLISH_DIVERGENCE,
+                                                   description=DESC_BULLISH_DIVERGENCE,
+                                                   signal_type=CandleSignalsLib.type_bullish(),
+                                                   signal_line=signal_line,
+                                                   delete_bar_index=delete_bar_index,
+                                                   delete_mode=delete_mode)
 				continue
 
 			if divergence.divergence_type == TYPE_HIDDEN_BULLISH_DIVERGENCE
-				if barstate.islast
-					CandleSignalsLib.add_candle_signal(id[divergence.n_back], (divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_HIDDEN_BULLISH_DIVERGENCE, DESC_HIDDEN_BULLISH_DIVERGENCE, CandleSignalsLib.type_bullish(), bar_index, divergence.is_confirmed ? CandleSignalsLib.mode_delete_equal() : CandleSignalsLib.mode_delete_equal_or_greater())
-				else
-					CandleSignalsLib.add_candle_signal(id[divergence.n_back], NAME_HIDDEN_BULLISH_DIVERGENCE, DESC_HIDDEN_BULLISH_DIVERGENCE, CandleSignalsLib.type_bullish())
+                CandleSignalsLib.add_candle_signal(id=id[divergence.n_back],
+                                                   name=(divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_HIDDEN_BULLISH_DIVERGENCE,
+                                                   description=DESC_HIDDEN_BULLISH_DIVERGENCE,
+                                                   signal_type=CandleSignalsLib.type_bullish(),
+                                                   signal_line=signal_line,
+                                                   delete_bar_index=delete_bar_index,
+                                                   delete_mode=delete_mode)
 				continue
 
 			if divergence.divergence_type == TYPE_BEARISH_DIVERGENCE
-				if barstate.islast
-					CandleSignalsLib.add_candle_signal(id[divergence.n_back], (divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_BEARISH_DIVERGENCE, DESC_BEARISH_DIVERGENCE, CandleSignalsLib.type_bearish(), bar_index, divergence.is_confirmed ? CandleSignalsLib.mode_delete_equal() : CandleSignalsLib.mode_delete_equal_or_greater())
-				else
-					CandleSignalsLib.add_candle_signal(id[divergence.n_back], NAME_BEARISH_DIVERGENCE, DESC_BEARISH_DIVERGENCE, CandleSignalsLib.type_bearish())
+                CandleSignalsLib.add_candle_signal(id=id[divergence.n_back],
+                                                   name=(divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_BEARISH_DIVERGENCE,
+                                                   description=DESC_BEARISH_DIVERGENCE,
+                                                   signal_type=CandleSignalsLib.type_bearish(),
+												   signal_line=signal_line,
+                                                   delete_bar_index=delete_bar_index,
+                                                   delete_mode=delete_mode)
 				continue
 
 			if divergence.divergence_type == TYPE_HIDDEN_BEARISH_DIVERGENCE
 				if barstate.islast
-					CandleSignalsLib.add_candle_signal(id[divergence.n_back], (divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_HIDDEN_BEARISH_DIVERGENCE, DESC_HIDDEN_BEARISH_DIVERGENCE, CandleSignalsLib.type_bearish(), bar_index, divergence.is_confirmed ? CandleSignalsLib.mode_delete_equal() : CandleSignalsLib.mode_delete_equal_or_greater())
-				else
-					CandleSignalsLib.add_candle_signal(id[divergence.n_back],NAME_HIDDEN_BEARISH_DIVERGENCE, DESC_HIDDEN_BEARISH_DIVERGENCE, CandleSignalsLib.type_bearish())
+                    CandleSignalsLib.add_candle_signal(id=id[divergence.n_back],
+                                                       name=(divergence.is_confirmed ? "" : "Unconfirmed ") + NAME_HIDDEN_BEARISH_DIVERGENCE,
+                                                       description=DESC_HIDDEN_BEARISH_DIVERGENCE,
+                                                       signal_type=CandleSignalsLib.type_bearish(),
+                                                       signal_line=signal_line,
+                                                       delete_bar_index=delete_bar_index,
+                                                       delete_mode=delete_mode)
 				continue
 
 // MAX_N_BACK = 499
@@ -376,17 +406,22 @@ export add_signals(CandleSignalsLib.CandleSignalsLib id, array<Divergence> diver
 // for i = 0 to curr_max_n_back
 // 	CandleSignalsLib.clean(candle_signals[i])
 
-// divergences = init(params=DivergenceLibParams.new(n_left_start=5,
-//                                                   n_left_step=10,
-//                                                   n_left_end=25,
-//                                                   n_right_start=5,
-//                                                   n_right_step=10,
-//                                                   max_in_between=-1),
-// 				   price_low=low_arr,
-// 				   price_high=high_arr,
-// 				   indicator=rsi_arr)
+// params = DivergenceLibParams.new(n_left_start=5,
+//                                  n_left_step=10,
+//                                  n_left_end=25,
+//                                  n_right_start=5,
+//                                  n_right_step=10,
+//                                  max_in_between=-1,
+//                                  add_lines=true,
+// 								 line_color_bullish=color.new(color.blue, 40),
+// 								 line_color_bearish=color.new(color.orange, 40))
 
-// add_signals(candle_signals, divergences)
+// divergences = init(params=params,
+//                    price_low=low_arr,
+//                    price_high=high_arr,
+//                    indicator=rsi_arr)
+
+// add_signals(candle_signals, params, divergences)
 
 // CandleSignalsLib.plot_candle_signals(candle_signals)
 
